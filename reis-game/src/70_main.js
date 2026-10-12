@@ -10,7 +10,7 @@ scene.add(player.h.root);
 // film-set key light: a soft warm light that rides beside the camera so Benjo's black coat and face read at night
 const keyLight = new T.PointLight(0xffe2c4, 6, 10, 1.4); scene.add(keyLight);
 // the player's own rigged model (generated from his reference image); the procedural body stays until it is present
-attachRealBody(player.h, 'models/benjo.glb', { height: 1.8 });
+attachRealBody(player.h, 'models/benjo.json', { height: 1.8 });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
@@ -20,13 +20,13 @@ function npc(key, name, look, x, z, face, solid = true) {
   if (solid) addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
   NPC[key] = { h, name, pos: h.root.position, face };
 }
-npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412, model: 'models/selim.glb' }, -15, -272.6, Math.PI);
-npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08, model: 'models/demir.glb' }, 182, -303, 0, false);
+npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412, model: 'models/selim.json' }, -15, -272.6, Math.PI);
+npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08, model: 'models/demir.json' }, 182, -303, 0, false);
 const SPEAKER = { BENJO: () => player.h, 'SELİM': () => NPC.selim.h, 'DEMİR': () => NPC.demir.h };
 
 const blackCar = spawnCar('merc', 0x0c0c10, -84, -299, Math.PI / 2);
 const CAR_HOME = [-84, -299, Math.PI / 2];
-dressCar(blackCar, 'models/ferrari.glb', { seat: [0.36, 0.1, -0.05] });
+dressCar(blackCar, 'models/ferrari.json', { seat: [0.36, 0.1, -0.05] });
 spawnCar('sahin', 0xf3e3c3, -46, -76.5, Math.PI / 2);
 spawnCar('taxi', 0xf2c014, -5, 75, -Math.PI / 2);
 
@@ -462,7 +462,7 @@ function spawnFight(kind) {
   if (kind === 'wh') {
     NPC.demir.h.root.visible = false;
     makeActor('gang', NPC.demir.pos.x, NPC.demir.pos.z, 'fist', { tag: 'wh', alert: true, hp: 140, reward: 300, facing: 0,
-      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, model: 'models/demir.glb' } });
+      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, model: 'models/demir.json' } });
     for (const [x, z] of [[176, -309], [188, -309]]) makeActor('gang', x, z, 'fist', { tag: 'wh', alert: true, hp: 80, reward: 100 });
     combatK = 1;
   }

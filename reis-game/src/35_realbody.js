@@ -15,10 +15,10 @@ function pointBone(bone, child, dir, w) {
 const findBone = (root, ...names) => { let hit = null; root.traverse(o => { if (hit || !o.isBone) return; const n = o.name.toLowerCase().replace(/^mixamorig[:_]?/, ''); if (names.includes(n)) hit = o; }); return hit; };
 /* which realistic model a look maps to: scanned characters (selim, demir, thugs) when shipped, Michelle for women;
    anyone without a model keeps the procedural body */
-const REAL_MALE = 'models/soldier.glb', REAL_FEMALE = 'models/michelle.glb';
+const REAL_MALE = 'models/soldier.json', REAL_FEMALE = 'models/michelle.json';
 function giveRealBody(h, look, role) {
   const female = !!look.skirt || !!look.female;
-  const url = look.model || (role === 'gang' ? 'models/thug.glb' : female ? REAL_FEMALE : null);
+  const url = look.model || (role === 'gang' ? 'models/thug.json' : female ? REAL_FEMALE : null);
   if (!url) return;
   attachRealBody(h, url, { height: (look.height || 1.78) * (female ? 0.97 : 1) * (role === 'gang' ? rnd(0.97, 1.04) : 1) });
 }
