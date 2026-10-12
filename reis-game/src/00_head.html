@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>REİS Gölgeler Şehri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Frank+Ruhl+Libre:wght@500;700&family=Heebo:wght@400;600;800&display=swap">
+<style>
+/* Layout: full-bleed 3D canvas, cinematic letterbox, HUD floats in the safe-area corners */
+:root{
+  --ink:#0c0a09; --smoke:rgba(14,10,8,.62); --bone:#f3e8d6; --dim:#bfae93;
+  --brass:#d9ae4f; --blood:#c8323a; --life:#7fc25a; --cop:#3d7bff;
+  --f-display:"Playfair Display", "Times New Roman", serif;
+  --f-drama:"Frank Ruhl Libre", "David", "Times New Roman", serif;
+  --f-ui:"Heebo", "Arial Hebrew", system-ui, sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{direction:rtl;height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--bone);font-family:var(--f-ui);
+  -webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+#game{position:fixed;inset:0}
+#game canvas{display:block;width:100%;height:100%}
+#vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(20,6,2,.45) 100%)}
+#hurt{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(200,20,20,.55) 100%);z-index:5}
+.bar{position:fixed;left:0;right:0;height:0;background:#000;z-index:20;transition:height .7s cubic-bezier(.6,0,.2,1);pointer-events:none}
+.bar.top{top:0}.bar.bot{bottom:0}
+body.cine .bar{height:11vh}
+body.cine .hud,body.intro .hud,body.intro #touch,body.cine #touch{opacity:0;pointer-events:none}
+.hud{transition:opacity .4s}
+
+#obj{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;width:min(330px,calc(100vw - 32px - 150px));
+  background:var(--smoke);border-top:2px solid var(--brass);padding:10px 14px 12px;backdrop-filter:blur(4px);z-index:10}
+#obj .ep{font:700 11px/1.2 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--brass);direction:ltr;text-align:right}
+#obj .txt{font:600 15px/1.4 var(--f-ui);margin-top:5px;text-wrap:balance}
+#obj .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;gap:10px}
+#money{font:800 18px/1 var(--f-ui);font-variant-numeric:tabular-nums;direction:ltr}
+#money small{color:var(--brass);font-weight:600;font-size:12px;margin-left:6px}
+#timer{font:800 18px/1 var(--f-ui);color:var(--blood);font-variant-numeric:tabular-nums;direction:ltr}
+#timer.ok{color:var(--bone)}
+#wanted{margin-top:8px;font:800 18px/1 var(--f-ui);letter-spacing:.15em;direction:ltr;text-align:right;color:rgba(243,232,214,.22)}
+#wanted b{color:var(--brass);text-shadow:0 0 8px rgba(217,174,79,.7)}
+#wanted.flash b{color:var(--cop)}
+#wanted small{font:700 10px var(--f-display);letter-spacing:.2em;color:var(--dim);margin-right:8px}
+
+#mapWrap{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:16px;width:150px;height:150px;border-radius:50%;
+  overflow:hidden;border:2px solid var(--brass);box-shadow:0 4px 18px rgba(0,0,0,.6);z-index:10;background:#1d1a17}
+#minimap{width:100%;height:100%}
+#hp{position:fixed;top:calc(env(safe-area-inset-top,0px) + 172px);left:16px;width:150px;height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(243,232,214,.3);z-index:10}
+#hp i{display:block;height:100%;width:100%;background:var(--life);transition:width .15s}
+#hp.low i{background:var(--blood)}
+#weapon{position:fixed;top:calc(env(safe-area-inset-top,0px) + 188px);left:16px;z-index:10;font:800 15px var(--f-ui);direction:ltr;text-shadow:0 1px 6px #000;font-variant-numeric:tabular-nums}
+#weapon small{display:block;font:600 10px var(--f-display);letter-spacing:.2em;color:var(--brass)}
+#bSnd{position:fixed;top:calc(env(safe-area-inset-top,0px) + 232px);left:16px;z-index:11;background:var(--smoke);color:var(--bone);
+  border:1px solid rgba(217,174,79,.5);font:600 12px var(--f-ui);padding:5px 10px;cursor:pointer}
+
+#cross{position:fixed;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;z-index:9;pointer-events:none}
+#cross::before,#cross::after{content:"";position:absolute;background:var(--bone);box-shadow:0 0 3px #000}
+#cross::before{left:12px;top:0;width:2px;height:26px}
+#cross::after{top:12px;left:0;height:2px;width:26px}
+#cross.hit::before,#cross.hit::after{background:var(--blood)}
+#cross.lock{width:40px;height:40px;margin:-20px 0 0 -20px;border:2px solid var(--blood);border-radius:50%}
+#cross.lock::before,#cross.lock::after{display:none}
+
+#speedo{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);left:50%;transform:translateX(-50%);direction:ltr;
+  font:900 34px/1 var(--f-display);text-shadow:0 2px 10px #000;z-index:10;text-align:center}
+#speedo small{display:block;font:600 10px var(--f-ui);letter-spacing:.2em;color:var(--brass);margin-top:2px}
+#prompt{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);left:50%;transform:translateX(-50%);
+  background:var(--smoke);padding:7px 14px;font:600 14px var(--f-ui);border-right:3px solid var(--brass);z-index:10;white-space:nowrap}
+#help{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);right:16px;font:400 11px/1.6 var(--f-ui);color:var(--dim);
+  text-align:right;max-width:360px;z-index:10;text-shadow:0 1px 4px #000}
+#help b{color:var(--bone);font-weight:600;direction:ltr;unicode-bidi:isolate}
+
+#toast{position:fixed;top:28%;left:0;right:0;text-align:center;z-index:30;pointer-events:none;opacity:0;transition:opacity .5s}
+#toast.show{opacity:1}
+#toast .t1{font:900 clamp(28px,6vw,56px)/1 var(--f-display);letter-spacing:.06em;direction:ltr;text-shadow:0 4px 30px #000}
+#toast .t1.bad{color:var(--blood)}
+#toast .rule{width:120px;height:2px;background:var(--blood);margin:14px auto}
+#toast .t2{font:500 clamp(16px,2.6vw,22px)/1.4 var(--f-drama);color:var(--brass);text-shadow:0 2px 10px #000}
+
+#dlg{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 2vh);transform:translateX(-50%);width:min(760px,calc(100vw - 32px));
+  z-index:25;text-align:center;cursor:pointer}
+#dlg .who{font:700 13px var(--f-display);letter-spacing:.24em;color:var(--brass);direction:ltr}
+#dlg .line{font:500 clamp(17px,2.4vw,24px)/1.45 var(--f-drama);margin-top:6px;text-shadow:0 2px 8px #000;text-wrap:balance}
+#dlg .more{font:400 11px var(--f-ui);color:var(--dim);margin-top:6px}
+
+.screen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding:24px 16px;text-align:center;background:linear-gradient(180deg,rgba(8,5,4,.15),rgba(8,5,4,.82) 75%)}
+.logo{font:900 clamp(64px,16vw,150px)/.9 var(--f-display);letter-spacing:.08em;direction:ltr;text-shadow:0 6px 40px rgba(0,0,0,.8);margin:0}
+.logo span{color:var(--blood)}
+.subl{font:700 clamp(13px,2.2vw,18px) var(--f-display);letter-spacing:.42em;color:var(--brass);direction:ltr;text-transform:uppercase}
+.heb{font:500 clamp(16px,2.4vw,21px)/1.5 var(--f-drama);max-width:34em;text-wrap:balance}
+.rule{width:140px;height:2px;background:var(--blood)}
+.btn{font:800 17px var(--f-ui);background:var(--blood);color:var(--bone);border:0;padding:14px 40px;cursor:pointer;margin-top:10px;
+  letter-spacing:.04em;box-shadow:0 8px 30px rgba(200,50,58,.35)}
+.btn:hover,.btn:focus-visible{background:#dd3b44;outline:2px solid var(--brass);outline-offset:3px}
+.btn:disabled{opacity:.6;cursor:wait}
+.keys{font:400 12px/1.8 var(--f-ui);color:var(--dim);max-width:40em}
+.keys b{color:var(--bone);direction:ltr;unicode-bidi:isolate}
+#dead{background:rgba(40,0,0,.55);z-index:35}
+#dead .logo{color:var(--blood);font-size:clamp(48px,12vw,110px)}
+
+#touch{position:fixed;inset:0;z-index:12;pointer-events:none}
+#joy{position:absolute;left:28px;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:130px;height:130px;border-radius:50%;
+  border:2px solid rgba(243,232,214,.35);background:rgba(12,10,9,.3);pointer-events:auto}
+#knob{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(243,232,214,.75)}
+.tb{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid rgba(243,232,214,.45);background:rgba(12,10,9,.45);
+  color:var(--bone);font:800 12px var(--f-ui);pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center}
+.tb.hot{border-color:var(--brass);background:rgba(217,174,79,.35)}
+.tb.big{width:78px;height:78px;font-size:14px;border-color:rgba(200,50,58,.8);background:rgba(200,50,58,.35)}
+#bAtk{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
+#bJump{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
+#bRun{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
+#bAct{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 122px)}
+#bWpn{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 196px)}
+body.touch #help{display:none}
+@media (max-height:500px){ #obj{padding:6px 10px 8px;width:min(280px,calc(100vw - 32px - 150px))} #obj .txt{font-size:12px} #wanted{margin-top:4px;font-size:14px}
+  #mapWrap{width:110px;height:110px} #hp{top:calc(env(safe-area-inset-top,0px) + 130px);width:110px} #weapon{top:calc(env(safe-area-inset-top,0px) + 144px)} #bSnd{top:calc(env(safe-area-inset-top,0px) + 186px)}
+  .tb{width:54px;height:54px} .tb.big{width:68px;height:68px} #joy{width:116px;height:116px} #knob{left:34px;top:34px} }
+@media (max-width:700px){ #help{display:none} #obj{width:calc(100vw - 32px - 160px)} #obj .txt{font-size:13px} }
+@media (prefers-reduced-motion:reduce){ .bar,#toast,.hud{transition:none} }
+</style>
+</head>
+<body class="intro">
+<div id="game"></div>
+<div id="vignette"></div>
+<div id="hurt"></div>
+<div class="bar top"></div><div class="bar bot"></div>
+
+<div class="hud" id="hud">
+  <div id="mapWrap"><canvas id="minimap" width="300" height="300"></canvas></div>
+  <div id="hp"><i></i></div>
+  <div id="weapon"><small>WEAPON</small><span id="wpnTxt">אגרופים</span></div>
+  <div id="obj">
+    <div class="ep" id="ep">Bölüm 1 · Çay ve Tehdit</div>
+    <div class="txt" id="objTxt">לך לבית התה של כמאל</div>
+    <div class="row"><div id="money">₺ 0<small id="bags">0/12</small></div><div id="timer" hidden></div></div>
+    <div id="wanted"><small>ARANIYOR</small><span id="stars">★★★</span></div>
+  </div>
+  <button id="bSnd" type="button">🔊 מוזיקה</button>
+  <div id="cross" hidden></div>
+  <div id="speedo" hidden>0<small>KM/SA</small></div>
+  <div id="prompt" hidden></div>
+  <div id="help"><b>WASD</b> תנועה · <b>Shift</b> ספרינט · <b>Space</b> קפיצה / בלם יד · <b>F</b> רכב · <b>לחיצה</b> אגרוף / ירי · <b>לחצן ימני</b> כוונון · <b>Q</b> החלפת נשק · <b>R</b> טעינה · <b>H</b> צופר</div>
+</div>
+
+<div id="touch" hidden>
+  <div id="joy"><div id="knob"></div></div>
+  <div class="tb big" id="bAtk">אגרוף</div>
+  <div class="tb" id="bAct">רכב</div>
+  <div class="tb" id="bJump">קפוץ</div>
+  <div class="tb" id="bRun">ספרינט</div>
+  <div class="tb" id="bWpn">נשק</div>
+</div>
+
+<div id="toast"><div class="t1" id="t1"></div><div class="rule"></div><div class="t2" id="t2"></div></div>
+<div id="dlg" hidden><div class="who" id="who"></div><div class="line" id="line"></div><div class="more">הקש לדילוג</div></div>
+
+<div class="screen" id="title">
+  <div class="subl">Bölüm 1</div>
+  <h1 class="logo">RE<span>İ</span>S</h1>
+  <div class="subl">Gölgeler Şehri</div>
+  <div class="rule"></div>
+  <div class="heb">עיר הצללים. שלושה ימים נעלמת, ועכשיו מישהו מנסה לקחת את השכונה שלך. הנמל, המשלוח, המשפחה. הלילה מחליטים מי נשאר עומד.</div>
+  <button class="btn" id="start" type="button" disabled>טוען קולות…</button>
+  <div class="keys" id="keysInfo"><b>WASD</b> תנועה · <b>לחיצה</b> אגרוף / ירי · <b>לחצן ימני</b> כוונון · <b>Q</b> נשק · <b>F</b> רכב · <b>עכבר</b> מצלמה</div>
+</div>
+
+<div class="screen" id="dead" hidden>
+  <h1 class="logo">BAYGIN</h1>
+  <div class="heb">איבדת את ההכרה. התעוררת בבית החולים, חסר לך קצת כסף בכיס.</div>
+</div>
+
+<div class="screen" id="endCard" hidden>
+  <div class="subl">Bölüm 1 · Son</div>
+  <h1 class="logo" style="font-size:clamp(40px,9vw,90px)">Devam Edecek…</h1>
+  <div class="rule"></div>
+  <div class="heb">סוף פרק 1. תייפון ברח, אבל אנשיו עוד מסתובבים ברחובות. העיר שלך עכשיו: אסוף את שקי הכסף, ותיזהר מהשטחים האדומים במפה.</div>
+  <button class="btn" id="freeRoam" type="button">המשך לשחק חופשי</button>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
