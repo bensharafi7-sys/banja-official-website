@@ -866,7 +866,7 @@ function createHuman(o) {
   if (o.under) mesh(RBOX, mat(o.under), j.chest, 0, 0.13, 0.135 * B, 0.09, 0.17, 0.02, false);
   j.neck = grp(j.chest, 0, 0.22, 0);
   mesh(CYL, skin, j.neck, 0, 0.02, 0, 0.062 * B, 0.12, 0.062 * B, false);
-  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || HS);
+  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || (o.noir ? 1.0 : HS));
   j.head = grp(j.headRoot);
   const H = j.head;
   if (o.photo) { photoHead(j, o.photo); } else {
@@ -937,6 +937,14 @@ function createHuman(o) {
   }
   if (o.extras) o.extras(j, { B, skin });
   const gun = buildGun(j.hand[1]);
+  // noir: until a scanned model arrives, people read as dark rain-soaked silhouettes with true head size, no toy faces
+  if (o.noir) {
+    for (const k of ['eyes', 'lids', 'brows']) for (const e of j[k]) e.visible = false;
+    const gunParts = new Set(); gun.g.traverse(m => gunParts.add(m));
+    // the face goes into shadow: small features (eyes, brows, moustache, nose) disappear, the head stays a dark shape
+    j.headRoot.traverse(m => { if (m.isMesh && Math.max(m.scale.x, m.scale.y, m.scale.z) < 0.07) m.visible = false; });
+    body.traverse(m => { if (!m.isMesh || !m.material.color || gunParts.has(m)) return; m.material = m.material.clone(); m.material.color.lerp(new T.Color(0x0a0a0c), 0.9); m.material.roughness = 0.7; m.material.metalness = 0; if (m.material.sheen) m.material.sheen = 0; if (m.material.emissive) m.material.emissive.setHex(0); });
+  }
   return { root, body, j, gun, phase: rnd(0, TAU), t: rnd(0, 20), airK: 0, mk: 0, lean: 0, downK: 0, blink: rnd(1, 4), lidK: 0, talk: 0,
     act: null, guardK: 0, aimK: 0, aimPitch: 0, recoil: 0, hitK: 0, hitSide: 1, panicK: 0, phoneK: 0, fallDir: 1, mood: 0, gestureK: 0 };
 }
@@ -1664,7 +1672,7 @@ const actors = [];
 function makeActor(faction, x, z, weapon, o = {}) {
   const look = faction === 'police' ? COP_LOOK() : GANG_LOOK();
   if (o.look) Object.assign(look, o.look);
-  const h = createHuman({ ...look, low: actors.length > 6 && LOW });
+  const h = createHuman({ ...look, noir: true, low: actors.length > 6 && LOW });
   giveRealBody(h, look, faction === 'police' ? 'cop' : 'gang');
   h.root.position.set(x, groundH(x, z), z); scene.add(h.root);
   h.gun.g.visible = weapon === 'pistol';
@@ -1808,7 +1816,7 @@ function placePed(p, px, pz) {
 function spawnPeds(n) {
   for (let i = 0; i < n; i++) {
     const look = PED_LOOKS[i % PED_LOOKS.length];
-    const h = createHuman({ ...look, build: rnd(0.95, 1.18), height: rnd(1.62, 1.86), skin: pick([0xd29a72, 0xb87c56, 0xe0aa84, 0x9a6545]), low: true, eyes: pick([0x5a3418, 0x3a2a14, 0x4a6a3a]) });
+    const h = createHuman({ ...look, noir: true, build: rnd(0.95, 1.18), height: rnd(1.62, 1.86), skin: pick([0xd29a72, 0xb87c56, 0xe0aa84, 0x9a6545]), low: true, eyes: pick([0x5a3418, 0x3a2a14, 0x4a6a3a]) });
     giveRealBody(h, look, 'ped');
     scene.add(h.root);
     const p = { h, pos: h.root.position, spd: rnd(1.1, 1.5), dir: Math.random() < 0.5 ? 1 : -1, s: 0, cx: 0, cz: 0, state: 'walk', stateT: 10, hp: 40, facing: 0, flee: null, friend: null, scale: 1 };
@@ -1923,13 +1931,55 @@ const player = { h: createHuman(REIS), pos: START.clone(), facing: Math.PI / 2, 
 scene.add(player.h.root);
 // film-set key light: a soft warm light that rides beside the camera so Benjo's black coat and face read at night
 const keyLight = new T.PointLight(0xffe2c4, 6, 10, 1.4); scene.add(keyLight);
+/* first person: until Benjo's scanned model is shipped we see the city through his eyes — black sleeves, leather gloves, the pistol */
+const FP = () => !player.h.real;
+scene.add(camera);
+const vm = { root: grp(camera), recoil: 0, punch: 0, punchArm: 1, bob: 0, sway: new T.Vector2() };
+{
+  const sleeve = new T.MeshStandardMaterial({ color: 0x0e0f12, roughness: 0.9, emissive: 0x050608, envMapIntensity: 0.35 }),
+    glove = new T.MeshStandardMaterial({ color: 0x1c1714, roughness: 0.35, metalness: 0.1, emissive: 0x0a0807, envMapIntensity: 2.2 }),
+    cuff = new T.MeshStandardMaterial({ color: 0x8a857c, roughness: 0.8, emissive: 0x141312 });
+  vm.arms = [0, 1].map(i => {
+    const s = i ? 1 : -1, arm = grp(vm.root, s * 0.2, -0.24, -0.32);
+    mesh(new T.CylinderGeometry(0.04, 0.05, 0.5, 14).rotateX(Math.PI / 2), sleeve, arm, 0, 0, 0.18, 1, 1, 1, false);
+    mesh(new T.CylinderGeometry(0.039, 0.039, 0.025, 14).rotateX(Math.PI / 2), cuff, arm, 0, 0, -0.06, 1, 1, 1, false);
+    const hand = grp(arm, 0, 0, -0.11);
+    mesh(new RoundedBoxGeometry(0.085, 0.07, 0.1, 3, 0.03), glove, hand, 0, 0, 0, 1, 1, 1, false);
+    mesh(new RoundedBoxGeometry(0.03, 0.03, 0.07, 2, 0.012), glove, hand, s * -0.045, 0.01, -0.02, 1, 1, 1, false).rotation.y = s * 0.5;
+    return { arm, hand, home: arm.position.clone() };
+  });
+  const gunHolder = grp(vm.arms[1].hand, 0, 0.02, -0.02); gunHolder.rotation.y = Math.PI;
+  vm.gun = buildGun(gunHolder); vm.gun.g.position.set(0, -0.02, -0.02); vm.gun.g.scale.setScalar(1.25); vm.gun.g.traverse(o => { if (o.isMesh && o.material !== flashM) { o.material = o.material.clone(); o.material.color.multiplyScalar(1.8); o.material.envMapIntensity = 2.5; } });
+  vm.h = { gun: vm.gun, recoil: 0 };
+  vm.root.traverse(o => { if (o.isMesh) { o.renderOrder = 10; if (o.material.envMapIntensity != null && o.material.metalness > 0.5) { o.material = o.material.clone(); o.material.envMapIntensity = 2.5; } } });
+  const vmLight = new T.PointLight(0xffd6b0, 0.6, 1.2, 2); vmLight.position.set(0.3, 0.2, -0.1); vm.root.add(vmLight);
+}
+function updateViewModel(dt) {
+  const show = FP() && !player.car && !player.dead && mode === 'play';
+  vm.root.visible = show; if (!show) return;
+  const pistol = player.weapon === 'pistol';
+  vm.gun.g.visible = pistol;
+  vm.recoil = Math.max(0, vm.recoil - dt * 7); vm.punch = Math.max(0, vm.punch - dt * 3.2);
+  vm.bob += dt * player.speed * 1.9;
+  const bobX = Math.sin(vm.bob) * 0.012 * Math.min(1, player.speed / 3), bobY = Math.abs(Math.cos(vm.bob)) * 0.014 * Math.min(1, player.speed / 3);
+  const reload = player.reload > 0 ? Math.sin(Math.min(1, (1.3 - player.reload) / 1.3) * Math.PI) : 0;
+  vm.arms.forEach((a, i) => {
+    const p = a.arm.position; p.copy(a.home);
+    if (pistol) { if (i === 1) p.set(0.13, -0.17, -0.36); else p.set(0.035, -0.21, -0.33); }
+    else p.y -= 0.03;
+    p.x += bobX; p.y += bobY - reload * 0.12;
+    a.arm.rotation.set(pistol ? vm.recoil * 0.35 + reload * 0.6 : 0.12, pistol && i === 0 ? 0.5 : 0, 0);
+    if (!pistol && vm.punchArm === i && vm.punch > 0) { const k = Math.sin(vm.punch * Math.PI); p.z -= k * 0.32; p.x -= (i ? 1 : -1) * k * 0.08; p.y += k * 0.06; }
+    p.z += pistol && i === 1 ? vm.recoil * 0.06 : 0;
+  });
+}
 // the player's own rigged model (generated from his reference image); the procedural body stays until it is present
 attachRealBody(player.h, 'models/benjo.json', { height: 1.8 });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
 function npc(key, name, look, x, z, face, solid = true) {
-  const h = createHuman(look); h.root.position.set(x, groundH(x, z), z); h.root.rotation.y = face; scene.add(h.root);
+  const h = createHuman({ ...look, noir: true }); h.root.position.set(x, groundH(x, z), z); h.root.rotation.y = face; scene.add(h.root);
   giveRealBody(h, look, 'npc');
   if (solid) addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
   NPC[key] = { h, name, pos: h.root.position, face };
@@ -1958,7 +2008,7 @@ const WH = { x0: 172, x1: 192, z0: -318, z1: -305, door: [180, 184] };
   for (const [x, z] of [[175, -315], [189, -314], [189, -308.5]]) { mesh(RBOX, mat(0x6b4f32, { r: 0.9 }), scene, x, 0.6, z, 1.2, 1.2, 1.2); addCol(x - 0.6, x + 0.6, z - 0.6, z + 0.6, 1.2); }
   mesh(BOX, mat(0x5a4632, { r: 0.8 }), scene, 183, 0.45, -311.5, 2, 0.9, 1);
   addCol(182, 184, -312, -311, 0.9);
-  const doorL = new T.PointLight(0xffb070, 30, 14, 1.6); doorL.position.set(182, 4.2, -301.5); scene.add(doorL);
+  const doorL = new T.PointLight(0xffb070, 12, 14, 1.6); doorL.position.set(182, 4.2, -301.5); scene.add(doorL);
   neon('DEPO 7', '#9ad8ff', 182, 5.3, WH.z1 + 0.3, 0, 4);
 }
 const ITEM = {};
@@ -2143,6 +2193,7 @@ function punch() {
   player.combo = player.comboT > 0 ? (player.combo + 1) % 3 : 0;
   const type = ['jab', 'cross', 'hook'][player.combo], arm = player.combo === 0 ? 0 : 1, dur = player.combo === 2 ? 0.55 : 0.4;
   player.h.act = { type, arm, t: 0, dur }; player.atkCd = dur * 0.62; player.comboT = 0.95;
+  vm.punch = 1; vm.punchArm = arm;
   const tgt = nearestTarget(3.2, 1.8, player.facing);
   if (tgt) player.facing = Math.atan2(tgt.pos.x - player.pos.x, tgt.pos.z - player.pos.z);
   player.pending = { t: dur * 0.42, combo: player.combo };
@@ -2165,12 +2216,16 @@ function fire() {
   if (player.atkCd > 0 || player.reload > 0) return;
   if (player.ammo <= 0) { sfx('empty'); startReload(); player.atkCd = 0.3; return; }
   player.ammo--; player.atkCd = 0.24;
-  const from = muzzle(player.h);
+  const from = muzzle(FP() ? vm.h : player.h); if (FP()) vm.recoil = 1;
   sfx('gun', player.pos); scarePeds(player.pos, 55); alertGang(player.pos, 45);
   if (copCars.some(c => c.pos.distanceTo(player.pos) < 45) || actors.some(a => a.faction === 'police' && !a.dead && a.pos.distanceTo(player.pos) < 45)) addWanted(1);
   shake = Math.max(shake, 0.08);
   let o, d;
-  if (player.aiming && !TOUCH) {
+  if (FP()) {
+    aimRay.setFromCamera(new T.Vector2(0, 0), camera); o = aimRay.ray.origin.clone(); d = aimRay.ray.direction.clone();
+    const tgt = TOUCH ? (player.lock || nearestTarget(32, 0.35, cam.yaw)) : null;
+    if (tgt) { const c = new T.Vector3(tgt.pos.x + rnd(-0.12, 0.12), tgt.pos.y + rnd(1.05, 1.5), tgt.pos.z + rnd(-0.12, 0.12)); d = c.sub(o).normalize(); }
+  } else if (player.aiming && !TOUCH) {
     aimRay.setFromCamera(new T.Vector2(0, 0), camera); o = aimRay.ray.origin.clone(); d = aimRay.ray.direction.clone();
   } else {
     const tgt = player.lock || nearestTarget(32, 0.6, player.facing);
@@ -2478,6 +2533,7 @@ function startDialog(lines, who, done, opts = {}) {
     player.facing = Math.atan2(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
     n.h.root.rotation.y = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
   }
+  if (FP() && n) { cam.yaw = player.facing; cam.pitch = 0.28; }
   dlg = { lines, i: -1, who: n, done, t: 0, cut: true, at: performance.now(), auto: 0, phone: !!opts.phone };
   setTimeout(() => advanceDialog(false), 700);
 }
@@ -2503,7 +2559,13 @@ function cutCamera(dt) {
   if (!dlg) return;
   let want, lookAt;
   const P = playerPos();
-  if (!dlg.who && player.car) {
+  if (FP()) {
+    // through Benjo's eyes: look at whoever is talking, or out at the rain during a phone call
+    const eye = player.car ? player.h.root.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.2, 0)) : new T.Vector3(P.x, P.y + 1.64, P.z);
+    want = eye;
+    if (dlg.who) lookAt = new T.Vector3(dlg.who.pos.x, dlg.who.pos.y + 1.55 + Math.sin(dlg.t * 0.6) * 0.02, dlg.who.pos.z);
+    else { const f = (player.car ? player.car.heading : player.facing) + Math.sin(dlg.t * 0.15) * 0.25; lookAt = eye.clone().add(new T.Vector3(Math.sin(f) * 10, -0.6 + Math.sin(dlg.t * 0.2) * 0.3, Math.cos(f) * 10)); }
+  } else if (!dlg.who && player.car) {
     const c = player.car, hw = player.h.root.getWorldPosition(new T.Vector3());
     let ox = hw.x - c.pos.x, oz = hw.z - c.pos.z; const ol = Math.hypot(ox, oz);
     if (ol < 0.1) { ox = Math.cos(c.heading); oz = -Math.sin(c.heading); } else { ox /= ol; oz /= ol; }
@@ -2527,7 +2589,7 @@ function cutCamera(dt) {
   if (dlg.cut) { cam.pos.copy(want); cam.look.copy(lookAt); dlg.cut = false; }
   cam.pos.lerp(want, damp(4, dt)); cam.look.lerp(lookAt, damp(5, dt));
   camera.position.copy(cam.pos); camera.lookAt(cam.look);
-  if (Math.abs(camera.fov - 40) > 0.1) { camera.fov = 40; camera.updateProjectionMatrix(); }
+  const dfov = FP() ? 50 : 40; if (Math.abs(camera.fov - dfov) > 0.1) { camera.fov = dfov; camera.updateProjectionMatrix(); }
 }
 /* ───────── Tayfun's turf (free roam): crews hang out, defend their corner ───────── */
 const turf = GANG_BLOCKS.map(([i, j]) => ({ cx: ORG + BLK / 2 + i * BLK, cz: ORG + BLK / 2 + j * BLK, cool: 0, spawned: false, tag: 'turf' + i + j }));
@@ -2645,8 +2707,10 @@ function updateFoot(dt) {
     const d = angDiff(P.facing, Math.atan2(dx, dz)), ts = lerp(10, 6, clamp(P.speed / 7, 0, 1));
     const s = clamp(d, -ts * dt, ts * dt); P.facing += s; P.turn = s / dt; moveDir = P.facing;
   } else P.turn = lerp(P.turn, 0, damp(10, dt));
-  if (!P.aiming) P.lock = null;
+  if (FP()) { P.facing = cam.yaw; P.turn = 0; moveDir = mag > 0.12 ? Math.atan2(dx, dz) : P.facing; if (TOUCH) P.lock = nearestTarget(30, 0.3, cam.yaw); }
+  else if (!P.aiming) P.lock = null;
   if (TOUCH && atkHeld && P.weapon === 'pistol' && P.atkCd <= 0) fire();
+  if (FP() && P.lock && TOUCH && atkHeld) { const want = Math.atan2(P.lock.pos.x - P.pos.x, P.lock.pos.z - P.pos.z); cam.yaw += clamp(angDiff(cam.yaw, want), -3 * dt, 3 * dt); }
   P.pos.x += Math.sin(moveDir) * P.speed * dt; P.pos.z += Math.cos(moveDir) * P.speed * dt;
   if (h.act && h.act.t < h.act.dur * 0.45) { P.pos.x += Math.sin(P.facing) * 1.4 * dt; P.pos.z += Math.cos(P.facing) * 1.4 * dt; }
   collide(P.pos, 0.35);
@@ -2691,6 +2755,20 @@ function updateDrive(dt) {
 }
 function followCamera(dt) {
   const inCar = !!player.car, P = player;
+  if (FP() && !inCar) {
+    // eye-level camera: cam.pitch 0.28 is level; drag up/down to look
+    const look = clamp(-(cam.pitch - 0.28) * 1.25, -1.2, 1.1), fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
+    const bobY = P.grounded ? Math.abs(Math.sin(vm.bob)) * 0.045 * Math.min(1, P.speed / 3) : 0;
+    const eyeY = P.dead ? lerp(cam.pos.y || P.pos.y + 1.66, P.pos.y + 0.35, damp(3, dt)) : P.pos.y + 1.64 + bobY - (P.down > 0 ? 1.1 : 0);
+    cam.pos.set(P.pos.x, eyeY, P.pos.z);
+    camera.position.copy(cam.pos);
+    if (shake > 0) { camera.position.x += rnd(-1, 1) * shake * 0.12; camera.position.y += rnd(-1, 1) * shake * 0.12; shake = Math.max(0, shake - dt * 2.5); }
+    cam.look.set(cam.pos.x + fx * Math.cos(look) * 10, cam.pos.y + Math.sin(look) * 10 + vm.recoil * 0.25, cam.pos.z + fz * Math.cos(look) * 10);
+    camera.lookAt(cam.look);
+    if (P.dead) camera.rotateZ(Math.min(1, P.deadT) * 0.5);
+    const fov = 72; if (Math.abs(camera.fov - fov) > 0.1) { camera.fov = lerp(camera.fov, fov, damp(8, dt)); camera.updateProjectionMatrix(); }
+    return;
+  }
   const tp = inCar ? P.car.pos : P.pos;
   camIdle += dt;
   if (inCar && camIdle > 1.2 && Math.abs(P.car.speed) > 2) { cam.yaw += angDiff(cam.yaw, P.car.heading) * damp(2.2, dt); cam.pitch = lerp(cam.pitch, 0.22, damp(1.5, dt)); }
@@ -2760,6 +2838,8 @@ function update(dt) {
   }
   updateLipSync(); updateFX(dt); updateWanted(dt); updateTurf(dt); updateGPS(dt);
   updateRain(dt, camera.position); waveFlag(worldT);
+  updateViewModel(dt);
+  player.h.root.visible = !FP();
   sea.material.uniforms.time.value += dt * 0.5; if (LOW) waterN.offset.set(worldT * 0.004, worldT * 0.002); if (gradePass) gradePass.uniforms.time.value = worldT % 100;
   combatK = lerp(combatK, actors.some(a => hostile(a) && !a.dead && a.pos.distanceTo(pp) < 50) || S.wanted >= 2 ? 1 : 0, damp(0.8, dt));
   const now = performance.now() / 1000;
@@ -2780,6 +2860,7 @@ function update(dt) {
   sun.target.position.set(fc.x, 0, fc.z); sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
   { const P = playerPos(), dx = camera.position.x - P.x, dz = camera.position.z - P.z, d = Math.hypot(dx, dz) || 1;
+    keyLight.intensity = FP() && !player.car ? 0 : 6;
     keyLight.position.set(P.x + dx / d * 2.2 - dz / d * 1.6, P.y + 2.6, P.z + dz / d * 2.2 + dx / d * 1.6); }
   // HUD
   $('money').firstChild.nodeValue = '₺ ' + S.money.toLocaleString('en-US');
@@ -2789,9 +2870,9 @@ function update(dt) {
   $('wpnTxt').textContent = player.weapon === 'pistol' ? (player.reload > 0 ? 'טוען…' : `אקדח  ${player.ammo} / ${player.reserve}`) : 'אגרופים';
   $('stars').innerHTML = '<b>' + '★'.repeat(S.wanted) + '</b>' + '★'.repeat(3 - S.wanted);
   $('wanted').classList.toggle('flash', S.wanted > 0 && Math.floor(now * 3) % 2 === 0);
-  const showCross = mode === 'play' && !player.car && player.weapon === 'pistol' && (player.aiming || TOUCH);
+  const showCross = mode === 'play' && !player.car && player.weapon === 'pistol' && (player.aiming || TOUCH || FP());
   const cr = $('cross'); cr.hidden = !showCross;
-  if (showCross && TOUCH && player.lock) {
+  if (showCross && TOUCH && player.lock && !FP()) {
     tmpProj.set(player.lock.pos.x, player.lock.pos.y + 1.3, player.lock.pos.z).project(camera);
     cr.className = 'lock'; cr.style.left = ((tmpProj.x + 1) / 2 * innerWidth) + 'px'; cr.style.top = ((1 - tmpProj.y) / 2 * innerHeight) + 'px';
   } else if (showCross) { cr.className = hitMarkT > 0 ? 'hit' : ''; cr.style.left = '50%'; cr.style.top = '50%'; }
@@ -2799,7 +2880,7 @@ function update(dt) {
   $('bAtk').textContent = player.weapon === 'pistol' ? 'ירי' : 'אגרוף';
   $('bJump').textContent = player.car ? 'בלם יד' : 'קפוץ';
   $('bWpn').textContent = player.weapon === 'pistol' ? 'אגרופים' : 'אקדח'; $('bWpn').style.display = player.car ? 'none' : '';
-  player.h.gun.g.visible = player.weapon === 'pistol' && !player.car && !player.dead && mode === 'play';
+  player.h.gun.g.visible = player.weapon === 'pistol' && !player.car && !player.dead && mode === 'play' && !FP();
   hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
   $('hurt').style.opacity = Math.max(hurtFlash, player.hp < 30 && mode === 'play' ? 0.35 + Math.sin(now * 4) * 0.1 : 0);
 }

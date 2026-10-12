@@ -72,7 +72,7 @@ function createHuman(o) {
   if (o.under) mesh(RBOX, mat(o.under), j.chest, 0, 0.13, 0.135 * B, 0.09, 0.17, 0.02, false);
   j.neck = grp(j.chest, 0, 0.22, 0);
   mesh(CYL, skin, j.neck, 0, 0.02, 0, 0.062 * B, 0.12, 0.062 * B, false);
-  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || HS);
+  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || (o.noir ? 1.0 : HS));
   j.head = grp(j.headRoot);
   const H = j.head;
   if (o.photo) { photoHead(j, o.photo); } else {
@@ -143,6 +143,14 @@ function createHuman(o) {
   }
   if (o.extras) o.extras(j, { B, skin });
   const gun = buildGun(j.hand[1]);
+  // noir: until a scanned model arrives, people read as dark rain-soaked silhouettes with true head size, no toy faces
+  if (o.noir) {
+    for (const k of ['eyes', 'lids', 'brows']) for (const e of j[k]) e.visible = false;
+    const gunParts = new Set(); gun.g.traverse(m => gunParts.add(m));
+    // the face goes into shadow: small features (eyes, brows, moustache, nose) disappear, the head stays a dark shape
+    j.headRoot.traverse(m => { if (m.isMesh && Math.max(m.scale.x, m.scale.y, m.scale.z) < 0.07) m.visible = false; });
+    body.traverse(m => { if (!m.isMesh || !m.material.color || gunParts.has(m)) return; m.material = m.material.clone(); m.material.color.lerp(new T.Color(0x0a0a0c), 0.9); m.material.roughness = 0.7; m.material.metalness = 0; if (m.material.sheen) m.material.sheen = 0; if (m.material.emissive) m.material.emissive.setHex(0); });
+  }
   return { root, body, j, gun, phase: rnd(0, TAU), t: rnd(0, 20), airK: 0, mk: 0, lean: 0, downK: 0, blink: rnd(1, 4), lidK: 0, talk: 0,
     act: null, guardK: 0, aimK: 0, aimPitch: 0, recoil: 0, hitK: 0, hitSide: 1, panicK: 0, phoneK: 0, fallDir: 1, mood: 0, gestureK: 0 };
 }
