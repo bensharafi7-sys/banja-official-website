@@ -37,6 +37,16 @@ function buildGun(hand) {
   return { g, flash };
 }
 
+/* photographic head: the player's real face projected onto the front half of the skull */
+const PH_FRONT = new T.SphereGeometry(1, 56, 40, 0, Math.PI), PH_BACK = new T.SphereGeometry(1, 40, 28, Math.PI, Math.PI);
+{ const p = PH_FRONT.attributes.position, uv = PH_FRONT.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 1) / 2, (p.getY(i) + 1) / 2); }
+function photoHead(j, url) {
+  const tex = new T.TextureLoader().load(url); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8;
+  const H = j.head;
+  mesh(PH_FRONT, new T.MeshStandardMaterial({ map: tex, roughness: 0.62 }), H, 0, 0.125, 0, 0.118, 0.15, 0.122, true);
+  mesh(PH_BACK, mat(0xffffff, { map: pepperTex('#3d3a38', 'rgba(150,145,140,.7)', 500), r: 0.95 }), H, 0, 0.125, 0, 0.118, 0.15, 0.122, true);
+  j.jaw = grp(H);
+}
 function createHuman(o) {
   const B = o.build || 1, sc = (o.height || 1.78) / 1.78, low = !!o.low;
   const skin = mat(o.skin || 0xc98a64, { skin: 1 }), shirt = mat(o.shirt, { r: 0.85 }), pants = mat(o.pants, { r: 0.9 }),
@@ -56,9 +66,10 @@ function createHuman(o) {
   if (o.under) mesh(RBOX, mat(o.under), j.chest, 0, 0.13, 0.135 * B, 0.09, 0.17, 0.02, false);
   j.neck = grp(j.chest, 0, 0.22, 0);
   mesh(CYL, skin, j.neck, 0, 0.02, 0, 0.062 * B, 0.12, 0.062 * B, false);
-  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(HS);
+  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || HS);
   j.head = grp(j.headRoot);
   const H = j.head;
+  if (o.photo) { photoHead(j, o.photo); } else {
   mesh(SPH, skin, H, 0, 0.1, 0, 0.102, 0.118, 0.11, sh);
   for (const s of [-1, 1]) mesh(SPHM, skin, H, s * 0.054, 0.064, 0.058, 0.038, 0.032, 0.034, false);
   // jaw (opens with the voice amplitude)
@@ -97,6 +108,7 @@ function createHuman(o) {
   if (o.cap) { hairCap(H, mat(o.cap, { r: 0.9 }), -0.3, 1.07, 0.112); mesh(RBOX, mat(o.cap), H, 0, 0.19, 0.12, 0.17, 0.016, 0.085, false).rotation.x = -0.15; }
   if (o.scarf) { const sm = mat(o.scarf, { r: 0.95 }); sm.side = T.DoubleSide; mesh(HOOD, sm, H, 0, 0.1, -0.006, 0.122, 0.142, 0.13, false); }
   if (o.moustache) { for (const s of [-1, 1]) { const m = mesh(capsule(0.011, 0.035, 10), o.hair != null ? hairM : dark, H, s * 0.02, 0.058, 0.118, 1, 1, 1, false); m.rotation.z = Math.PI / 2 + s * 0.35; } }
+  }
   // arms
   for (const s of [1, -1]) { // +1 = left (+x)
     const sa = grp(j.chest, s * 0.25 * B, 0.14, 0);
@@ -132,8 +144,9 @@ function createHuman(o) {
 /* the player: stocky, black polo, cargo pants, grey sneakers, salt-and-pepper goatee,
    short spiky dark hair greying at the sides, gold chain, ear stud + tragus ring, orange watch, keys */
 const REIS = {
-  build: 1.2, belly: 1.12, height: 1.78, skin: 0xc99070, shirt: 0x17181d, pants: 0x15161a, shoes: 0xc4c1b8, sole: 0xf6f6f2,
-  sleeves: 'short', cargo: true, watch: 0xf07a2a, brows: 0x1a1412, eyes: 0x4a2a14,
+  photo: 'img/reis_face.jpg', headScale: 1.16, skirt: 0.62, skirtC: 0x141416, under: 0x36373c,
+  build: 1.2, belly: 1.12, height: 1.78, skin: 0xc99070, shirt: 0x141416, pants: 0x15161c, shoes: 0x141414, sole: 0x1c1c1c,
+  sleeves: 'long', watch: 0xf07a2a, brows: 0x1a1412, eyes: 0x4a2a14,
   face(h, { dark, j }) {
     const sides = mat(0xffffff, { map: pepperTex('#4a4643', 'rgba(220,215,205,.85)', 900), r: 1 });
     const beard = mat(0xffffff, { map: pepperTex('#3e3a37', 'rgba(230,226,218,.9)', 1400), r: 1 });

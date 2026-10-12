@@ -484,6 +484,7 @@ function advanceDialog(user) {
   }
   const [w, l, vid] = dlg.lines[dlg.i];
   $('who').textContent = w; $('line').textContent = l; $('dlg').hidden = false;
+  $('dlgFace').hidden = w !== 'REİS';
   const dur = say(vid, SPEAKER[w]?.());
   dlg.auto = (dur || Math.max(2.5, l.length * 0.075)) + 0.6;
 }

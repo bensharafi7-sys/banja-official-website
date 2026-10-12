@@ -82,10 +82,13 @@ body.cine .hud,body.intro .hud,body.intro #touch,body.cine #touch{opacity:0;poin
   z-index:25;text-align:center;cursor:pointer}
 #dlg .who{font:700 13px var(--f-display);letter-spacing:.24em;color:var(--brass);direction:ltr}
 #dlg .line{font:500 clamp(17px,2.4vw,24px)/1.45 var(--f-drama);margin-top:6px;text-shadow:0 2px 8px #000;text-wrap:balance}
+#dlgFace{position:absolute;bottom:calc(100% + 1vh);right:0;width:clamp(110px,16vw,190px);aspect-ratio:9/10;object-fit:cover;border:2px solid var(--brass);box-shadow:0 8px 30px rgba(0,0,0,.6)}
 #dlg .more{font:400 11px var(--f-ui);color:var(--dim);margin-top:6px}
 
 .screen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
   padding:24px 16px;text-align:center;background:linear-gradient(180deg,rgba(8,5,4,.15),rgba(8,5,4,.82) 75%)}
+.screen .key{position:absolute;left:4vw;bottom:0;height:92%;max-width:46vw;object-fit:contain;object-position:bottom;opacity:.92;z-index:-1;-webkit-mask-image:linear-gradient(180deg,#000 70%,transparent);mask-image:linear-gradient(180deg,#000 70%,transparent)}
+@media (max-width:800px){.screen .key{opacity:.35;left:50%;transform:translateX(-50%);max-width:none}}
 .logo{font:900 clamp(64px,16vw,150px)/.9 var(--f-display);letter-spacing:.08em;direction:ltr;text-shadow:0 6px 40px rgba(0,0,0,.8);margin:0}
 .logo span{color:var(--blood)}
 .subl{font:700 clamp(13px,2.2vw,18px) var(--f-display);letter-spacing:.42em;color:var(--brass);direction:ltr;text-transform:uppercase}
@@ -154,9 +157,10 @@ body.touch #help{display:none}
 </div>
 
 <div id="toast"><div class="t1" id="t1"></div><div class="rule"></div><div class="t2" id="t2"></div></div>
-<div id="dlg" hidden><div class="who" id="who"></div><div class="line" id="line"></div><div class="more">הקש לדילוג</div></div>
+<div id="dlg" hidden><img id="dlgFace" src="img/reis_portrait.jpg" alt="Reis" hidden><div class="who" id="who"></div><div class="line" id="line"></div><div class="more">הקש לדילוג</div></div>
 
 <div class="screen" id="title">
+  <img class="key" src="img/reis_full.png" alt="">
   <div class="subl">Bölüm 1</div>
   <h1 class="logo">RE<span>İ</span>S</h1>
   <div class="subl">Gölgeler Şehri</div>
@@ -717,6 +721,16 @@ function buildGun(hand) {
   return { g, flash };
 }
 
+/* photographic head: the player's real face projected onto the front half of the skull */
+const PH_FRONT = new T.SphereGeometry(1, 56, 40, 0, Math.PI), PH_BACK = new T.SphereGeometry(1, 40, 28, Math.PI, Math.PI);
+{ const p = PH_FRONT.attributes.position, uv = PH_FRONT.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 1) / 2, (p.getY(i) + 1) / 2); }
+function photoHead(j, url) {
+  const tex = new T.TextureLoader().load(url); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 8;
+  const H = j.head;
+  mesh(PH_FRONT, new T.MeshStandardMaterial({ map: tex, roughness: 0.62 }), H, 0, 0.125, 0, 0.118, 0.15, 0.122, true);
+  mesh(PH_BACK, mat(0xffffff, { map: pepperTex('#3d3a38', 'rgba(150,145,140,.7)', 500), r: 0.95 }), H, 0, 0.125, 0, 0.118, 0.15, 0.122, true);
+  j.jaw = grp(H);
+}
 function createHuman(o) {
   const B = o.build || 1, sc = (o.height || 1.78) / 1.78, low = !!o.low;
   const skin = mat(o.skin || 0xc98a64, { skin: 1 }), shirt = mat(o.shirt, { r: 0.85 }), pants = mat(o.pants, { r: 0.9 }),
@@ -736,9 +750,10 @@ function createHuman(o) {
   if (o.under) mesh(RBOX, mat(o.under), j.chest, 0, 0.13, 0.135 * B, 0.09, 0.17, 0.02, false);
   j.neck = grp(j.chest, 0, 0.22, 0);
   mesh(CYL, skin, j.neck, 0, 0.02, 0, 0.062 * B, 0.12, 0.062 * B, false);
-  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(HS);
+  j.headRoot = grp(j.neck, 0, 0.035, 0.012); j.headRoot.scale.setScalar(o.headScale || HS);
   j.head = grp(j.headRoot);
   const H = j.head;
+  if (o.photo) { photoHead(j, o.photo); } else {
   mesh(SPH, skin, H, 0, 0.1, 0, 0.102, 0.118, 0.11, sh);
   for (const s of [-1, 1]) mesh(SPHM, skin, H, s * 0.054, 0.064, 0.058, 0.038, 0.032, 0.034, false);
   // jaw (opens with the voice amplitude)
@@ -777,6 +792,7 @@ function createHuman(o) {
   if (o.cap) { hairCap(H, mat(o.cap, { r: 0.9 }), -0.3, 1.07, 0.112); mesh(RBOX, mat(o.cap), H, 0, 0.19, 0.12, 0.17, 0.016, 0.085, false).rotation.x = -0.15; }
   if (o.scarf) { const sm = mat(o.scarf, { r: 0.95 }); sm.side = T.DoubleSide; mesh(HOOD, sm, H, 0, 0.1, -0.006, 0.122, 0.142, 0.13, false); }
   if (o.moustache) { for (const s of [-1, 1]) { const m = mesh(capsule(0.011, 0.035, 10), o.hair != null ? hairM : dark, H, s * 0.02, 0.058, 0.118, 1, 1, 1, false); m.rotation.z = Math.PI / 2 + s * 0.35; } }
+  }
   // arms
   for (const s of [1, -1]) { // +1 = left (+x)
     const sa = grp(j.chest, s * 0.25 * B, 0.14, 0);
@@ -812,8 +828,9 @@ function createHuman(o) {
 /* the player: stocky, black polo, cargo pants, grey sneakers, salt-and-pepper goatee,
    short spiky dark hair greying at the sides, gold chain, ear stud + tragus ring, orange watch, keys */
 const REIS = {
-  build: 1.2, belly: 1.12, height: 1.78, skin: 0xc99070, shirt: 0x17181d, pants: 0x15161a, shoes: 0xc4c1b8, sole: 0xf6f6f2,
-  sleeves: 'short', cargo: true, watch: 0xf07a2a, brows: 0x1a1412, eyes: 0x4a2a14,
+  photo: 'img/reis_face.jpg', headScale: 1.16, skirt: 0.62, skirtC: 0x141416, under: 0x36373c,
+  build: 1.2, belly: 1.12, height: 1.78, skin: 0xc99070, shirt: 0x141416, pants: 0x15161c, shoes: 0x141414, sole: 0x1c1c1c,
+  sleeves: 'long', watch: 0xf07a2a, brows: 0x1a1412, eyes: 0x4a2a14,
   face(h, { dark, j }) {
     const sides = mat(0xffffff, { map: pepperTex('#4a4643', 'rgba(220,215,205,.85)', 900), r: 1 });
     const beard = mat(0xffffff, { map: pepperTex('#3e3a37', 'rgba(230,226,218,.9)', 1400), r: 1 });
@@ -2050,6 +2067,7 @@ function advanceDialog(user) {
   }
   const [w, l, vid] = dlg.lines[dlg.i];
   $('who').textContent = w; $('line').textContent = l; $('dlg').hidden = false;
+  $('dlgFace').hidden = w !== 'REİS';
   const dur = say(vid, SPEAKER[w]?.());
   dlg.auto = (dur || Math.max(2.5, l.length * 0.075)) + 0.6;
 }
