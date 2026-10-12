@@ -13,42 +13,97 @@ function pointBone(bone, child, dir, w) {
   bone.updateMatrixWorld(true);
 }
 const findBone = (root, ...names) => { let hit = null; root.traverse(o => { if (hit || !o.isBone) return; const n = o.name.toLowerCase().replace(/^mixamorig[:_]?/, ''); if (names.includes(n)) hit = o; }); return hit; };
+/* which realistic model a look maps to: scanned characters (selim, demir, thugs) when shipped, Michelle for women;
+   anyone without a model keeps the procedural body */
+const REAL_MALE = 'models/soldier.glb', REAL_FEMALE = 'models/michelle.glb';
+function giveRealBody(h, look, role) {
+  const female = !!look.skirt || !!look.female;
+  const url = look.model || (role === 'gang' ? 'models/thug.glb' : female ? REAL_FEMALE : null);
+  if (!url) return;
+  attachRealBody(h, url, { height: (look.height || 1.78) * (female ? 0.97 : 1) * (role === 'gang' ? rnd(0.97, 1.04) : 1) });
+}
+const GLTF_CACHE = {};
+const loadGLTF = url => GLTF_CACHE[url] ||= new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej));
+/* retargeting: an invisible mocap skeleton plays Idle/Walk/Run; every frame its bone motion (relative to its own rest
+   pose) is transferred onto the character's skeleton, whatever its rest pose (T-pose mocap → A-pose scans) */
+const RT_BONES = ['hips', 'spine', 'spine1|spine01', 'spine2|spine02', 'neck', 'head',
+  'leftshoulder', 'leftarm', 'leftforearm', 'lefthand', 'rightshoulder', 'rightarm', 'rightforearm', 'righthand',
+  'leftupleg', 'leftleg', 'leftfoot', 'lefttoebase', 'rightupleg', 'rightleg', 'rightfoot', 'righttoebase'];
+const _rq = new T.Quaternion(), _rq2 = new T.Quaternion(), _rootQ = new T.Quaternion();
+const relQ = (bone, root, out) => { root.getWorldQuaternion(_rootQ).invert(); return bone.getWorldQuaternion(out).premultiply(_rootQ); };
+function buildRetarget(target, driver) {
+  target.updateMatrixWorld(true); driver.updateMatrixWorld(true);
+  const pairs = [];
+  for (const n of RT_BONES) {
+    const names = n.split('|'), t = findBone(target, ...names), d = findBone(driver, ...names);
+    if (!t || !d) continue;
+    pairs.push({ t, d, qt0: relQ(t, target, new T.Quaternion()), qs0inv: relQ(d, driver, new T.Quaternion()).invert(), pt0: t.position.clone(), ps0: d.position.clone() });
+  }
+  const hipsT = pairs[0]?.t, hipsD = pairs[0]?.d;
+  const k = hipsT && hipsD ? hipsT.getWorldPosition(new T.Vector3()).y / Math.max(1e-4, hipsD.getWorldPosition(new T.Vector3()).y) : 1;
+  return { pairs, k, scaleD: driver.getWorldScale(new T.Vector3()).y, scaleT: target.getWorldScale(new T.Vector3()).y };
+}
+function applyRetarget(rt, target, driver) {
+  driver.updateMatrixWorld(true);
+  target.getWorldQuaternion(_rootQ);
+  const rootQ = _rootQ.clone();
+  for (const p of rt.pairs) {
+    // wanted orientation of this bone, relative to the character root
+    relQ(p.d, driver, _rq).multiply(p.qs0inv).multiply(p.qt0);
+    _rq.premultiply(rootQ); // → world
+    p.t.parent.getWorldQuaternion(_rq2).invert();
+    p.t.quaternion.copy(_rq2.multiply(_rq));
+    p.t.updateMatrixWorld(true);
+  }
+  // hips bob/sway follows the mocap (vertical scaled to the character's leg length)
+  const h = rt.pairs[0];
+  if (h && h.t.parent) {
+    const dy = (h.d.position.y - h.ps0.y), dx = (h.d.position.x - h.ps0.x), dz = (h.d.position.z - h.ps0.z);
+    const f = rt.k * rt.scaleD / rt.scaleT;
+    h.t.position.set(h.pt0.x + dx * f * 0.3, h.pt0.y + dy * f, h.pt0.z + dz * f * 0.3);
+    h.t.updateMatrixWorld(true);
+  }
+}
+// realistic people: each human gets its own clone of a shared skinned model, animated by retargeted mocap
 function attachRealBody(h, url, opts = {}) {
-  new GLTFLoader().load(url, gltf => {
-    if (!gltf.animations.length) return; // needs at least idle/walk clips to replace the procedural rig
-    const model = gltf.scene;
+  Promise.all([loadGLTF(url), loadGLTF(opts.clips || REAL_MALE)]).then(([gltf, clipSrc]) => {
+    const clips = clipSrc.animations.filter(c => /^(Idle|Walk|Run)$/.test(c.name));
+    if (clips.length < 2 || h.dead) return;
+    const model = SkeletonUtils.clone(gltf.scene), driver = SkeletonUtils.clone(clipSrc.scene);
     model.traverse(o => {
       if (!o.isMesh) return;
       o.castShadow = true; o.frustumCulled = false;
       if (/visor/i.test(o.name)) { o.visible = false; return; }
-      if (opts.tint != null) { o.material = o.material.clone(); o.material.color.setHex(opts.tint); o.material.roughness = 0.8; o.material.metalness = 0.05; }
+      o.material = o.material.clone(); o.material.envMapIntensity = 0.6; o.material.metalness = Math.min(o.material.metalness ?? 0, 0.15);
+      if (o.material.emissiveMap) { o.material.emissiveMap = null; o.material.emissive?.setHex(0); }
+      if (opts.tint != null) o.material.color.setHex(opts.tint);
     });
     const B = n => findBone(model, ...n);
     model.updateMatrixWorld(true);
-    const top = B(['headtop_end', 'head']), tp = top.getWorldPosition(new T.Vector3()), ft = B(['lefttoebase', 'leftfoot']).getWorldPosition(new T.Vector3());
+    const top = B(['headtop_end', 'head_end', 'head']), tp = top.getWorldPosition(new T.Vector3()), ft = B(['lefttoebase', 'leftfoot']).getWorldPosition(new T.Vector3());
     const s = (opts.height || 1.78) / Math.max(0.1, tp.y - Math.min(0, ft.y - 0.08)); model.scale.setScalar(s);
     model.rotation.y = opts.yaw ?? 0;
     const holder = grp(h.root); holder.add(model);
+    h.root.updateMatrixWorld(true);
     const R = {
-      model, holder, hips: B(['hips']), spine: B(['spine2', 'spine1', 'chest']), head: B(['head']), headTop: B(['headtop_end']),
+      model, holder, driver, hips: B(['hips']), spine: B(['spine2', 'spine02', 'spine1', 'chest']), head: B(['head']), headTop: B(['headtop_end', 'head_end']),
       arm: [B(['leftarm']), B(['rightarm'])], fore: [B(['leftforearm']), B(['rightforearm'])], hand: [B(['lefthand']), B(['righthand'])],
       up: [B(['leftupleg']), B(['rightupleg'])], leg: [B(['leftleg']), B(['rightleg'])], foot: [B(['leftfoot']), B(['rightfoot'])],
-      mixer: new T.AnimationMixer(model), acts: {}, scale: s,
+      mixer: new T.AnimationMixer(driver), acts: {}, scale: s,
     };
-    for (const c of gltf.animations) { const a = R.mixer.clipAction(c); a.play(); a.setEffectiveWeight(c.name === 'Idle' ? 1 : 0); R.acts[c.name] = a; }
+    R.rt = buildRetarget(model, driver);
+    for (const c of clips) { const a = R.mixer.clipAction(c); a.play(); a.time = Math.random() * c.duration; a.weight = c.name === 'Idle' ? 1 : 0; a.setEffectiveWeight(a.weight); R.acts[c.name] = a; }
+    R.mixer.update(0.01); applyRetarget(R.rt, model, driver);
     // photographic head rides the head bone; the model's own head collapses to nothing
     if (opts.photo) {
       const fake = { head: new T.Group() }; photoHead(fake, opts.photo); R.photo = fake.head; scene.add(R.photo);
       R.photo.scale.setScalar(opts.headScale || 0.92);
-      model.updateMatrixWorld(true);
-      R.headQ0 = R.head.getWorldQuaternion(new T.Quaternion()).invert().multiply(h.root.getWorldQuaternion(new T.Quaternion()));
-      h.root.updateMatrixWorld(true);
       R.headQ0 = R.head.getWorldQuaternion(new T.Quaternion()).invert().multiply(holder.getWorldQuaternion(new T.Quaternion()));
     }
     h.body.visible = false;
-    if (h.gun) { scene.add(h.gun.g); }
+    if (h.gun) { scene.add(h.gun.g); h.gunFree = true; }
     h.real = R;
-  }, undefined, () => { /* model not shipped yet: keep the procedural body */ });
+  }).catch(e => { console.warn('real body', url, e && e.message); /* keep the procedural body */ });
 }
 const _f = new T.Vector3(), _r = new T.Vector3(), _u = new T.Vector3(0, 1, 0), _d1 = new T.Vector3(), _d2 = new T.Vector3(), _hq = new T.Quaternion(), _hp = new T.Vector3();
 function syncRealBody(h, dt, speed, st = {}) {
@@ -64,6 +119,7 @@ function syncRealBody(h, dt, speed, st = {}) {
     if (k === 'Walk') a.timeScale = clamp(speed / 1.5, 0.6, 1.6); if (k === 'Run') a.timeScale = clamp(speed / 5.2, 0.7, 1.4);
   }
   R.mixer.update(dt);
+  applyRetarget(R.rt, R.model, R.driver);
   // falls and knock-downs tip the whole body like the procedural rig
   R.holder.rotation.x = h.body.rotation.x; R.holder.position.y = h.body.position.y;
   R.model.updateMatrixWorld(true);

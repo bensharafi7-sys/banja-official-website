@@ -12,7 +12,7 @@ const TORSO = new T.LatheGeometry([[0, 0], [0.17, 0], [0.2, 0.05], [0.215, 0.15]
 const SKIRT = (top, bot, len) => new T.CylinderGeometry(top, bot, len, 24, 1, true);
 const PALM = new RoundedBoxGeometry(0.075, 0.085, 0.036, 3, 0.016);
 const TUFT = new T.ConeGeometry(0.03, 0.08, 12);
-const gunGeo = { body: new RoundedBoxGeometry(0.035, 0.07, 0.19, 2, 0.01), grip: new RoundedBoxGeometry(0.03, 0.11, 0.045, 2, 0.01) };
+const gunGeo = { slide: new RoundedBoxGeometry(0.03, 0.03, 0.19, 2, 0.006), frame: new RoundedBoxGeometry(0.027, 0.022, 0.15, 2, 0.005), grip: new RoundedBoxGeometry(0.03, 0.115, 0.05, 2, 0.01), guard: new T.TorusGeometry(0.019, 0.0035, 6, 16, Math.PI * 1.3), barrel: new T.CylinderGeometry(0.0075, 0.0075, 0.01, 12) };
 const flashM = new T.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95 });
 
 function buildHand(wr, skin, side) {
@@ -29,10 +29,16 @@ function buildHand(wr, skin, side) {
 }
 function buildGun(hand) {
   const g = grp(hand, 0, -0.08, 0.07); g.rotation.x = 0;
-  const m = mat(0x1b1c20, { r: 0.35, m: 0.7 });
-  mesh(gunGeo.body, m, g, 0, 0.03, 0.04, 1, 1, 1, false);
-  mesh(gunGeo.grip, m, g, 0, -0.02, -0.02, 1, 1, 1, false).rotation.x = 0.25;
-  const flash = mesh(SPHL, flashM, g, 0, 0.035, 0.17, 0.03, 0.03, 0.08, false); flash.visible = false;
+  const steel = mat(0x23252a, { r: 0.28, m: 0.85 }), poly = mat(0x141416, { r: 0.75 }), black = mat(0x0a0a0a, { r: 0.4, m: 0.6 });
+  mesh(gunGeo.slide, steel, g, 0, 0.045, 0.05, 1, 1, 1, false);
+  for (let k = 0; k < 6; k++) mesh(BOX, black, g, 0, 0.046, -0.03 + k * 0.006, 0.031, 0.026, 0.0025, false); // slide serrations
+  mesh(gunGeo.frame, poly, g, 0, 0.02, 0.035, 1, 1, 1, false);
+  mesh(gunGeo.grip, poly, g, 0, -0.035, -0.018, 1, 1, 1, false).rotation.x = 0.28;
+  const tg = mesh(gunGeo.guard, poly, g, 0, 0.004, 0.03, 1, 1, 1, false); tg.rotation.y = Math.PI / 2; tg.rotation.z = Math.PI * 0.85;
+  mesh(BOX, black, g, 0, 0.0, 0.026, 0.004, 0.02, 0.005, false).rotation.x = 0.3; // trigger
+  mesh(gunGeo.barrel, black, g, 0, 0.045, 0.146, 1, 1, 1, false).rotation.x = Math.PI / 2;
+  mesh(BOX, black, g, 0, 0.063, 0.135, 0.004, 0.006, 0.006, false); mesh(BOX, black, g, 0, 0.063, -0.04, 0.02, 0.006, 0.006, false);
+  const flash = mesh(SPHL, flashM, g, 0, 0.045, 0.19, 0.03, 0.03, 0.08, false); flash.visible = false;
   g.visible = false;
   return { g, flash };
 }
@@ -188,6 +194,10 @@ function setFist(h, k) {
 }
 /* procedural animation: gait, idle, combat layers, face */
 function animateHuman(h, dt, speed, st = {}) {
+  animateRig(h, dt, speed, st);
+  if (h.real) syncRealBody(h, dt, speed, st);
+}
+function animateRig(h, dt, speed, st) {
   const J = h.j; h.t += dt;
   // face: blinking, eyes, brows, jaw
   h.blink -= dt; if (h.blink < 0) { h.lidK = 1; h.blink = rnd(2, 5.5); }

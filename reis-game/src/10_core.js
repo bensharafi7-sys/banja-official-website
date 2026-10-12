@@ -5,6 +5,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const $ = id => document.getElementById(id);
@@ -21,13 +24,13 @@ const TOUCH = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in wind
 const LOW = TOUCH;
 
 /* ───────── renderer, Pixar-style soft light + bloom ───────── */
-const renderer = new T.WebGLRenderer({ antialias: !LOW, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, LOW ? 1.4 : 1.75));
+const renderer = new T.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, LOW ? 1.5 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = T.SRGBColorSpace;
 $('game').appendChild(renderer.domElement);
 
@@ -35,12 +38,33 @@ const scene = new T.Scene();
 scene.fog = new T.Fog(0x161c2c, 35, LOW ? 260 : 330);
 const camera = new T.PerspectiveCamera(56, innerWidth / innerHeight, 0.1, 2600);
 
+/* post: MSAA scene → bloom → tone map → film grade (teal shadows, amber highlights, vignette, grain) */
 let composer = null;
-if (!LOW) {
-  composer = new EffectComposer(renderer);
+const GRADE = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vig: { value: 1.0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, vig; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5; float r = dot(d, d);
+      vec3 c = vec3(texture2D(tDiffuse, vUv - d * 0.0025).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv + d * 0.0025).b);
+      float l = dot(c, vec3(0.299,0.587,0.114));
+      c = mix(c, c * vec3(0.86,1.0,1.08), smoothstep(0.35, 0.0, l));   // teal shadows
+      c = mix(c, c * vec3(1.08,1.0,0.88), smoothstep(0.35, 0.9, l));   // amber highlights
+      c = mix(vec3(l), c, 1.08);                                         // a touch more colour
+      c = (c - 0.5) * 1.06 + 0.5;                                        // contrast
+      c *= 1.0 - vig * smoothstep(0.12, 0.62, r) * 0.75;                 // vignette
+      c += (hash(vUv * 1000.0 + time) - 0.5) * 0.035;                    // grain
+      gl_FragColor = vec4(max(c, 0.0), 1.0);
+    }` };
+let gradePass = null;
+{
+  const rt = new T.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: T.HalfFloatType, samples: LOW ? 2 : 4 });
+  composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / 2, innerHeight / 2), 0.62, 0.6, 0.62));
+  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / (LOW ? 3 : 2), innerHeight / (LOW ? 3 : 2)), 0.7, 0.55, 0.6));
   composer.addPass(new OutputPass());
+  gradePass = new ShaderPass(GRADE); composer.addPass(gradePass);
 }
 
 const sunDir = new T.Vector3(-0.42, 0.22, -0.88).normalize();
@@ -70,9 +94,9 @@ scene.add(sky);
   }
 }
 
-const hemi = new T.HemisphereLight(0x5a6c9a, 0x2a1c1c, 0.75);
+const hemi = new T.HemisphereLight(0x6a7cac, 0x3a2a24, 1.0);
 scene.add(hemi);
-const sun = new T.DirectionalLight(0xa9bcff, 0.75);
+const sun = new T.DirectionalLight(0xa9bcff, 0.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
 const SR = LOW ? 45 : 62;

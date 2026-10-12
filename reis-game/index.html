@@ -104,22 +104,24 @@ body.cine .hud,body.intro .hud,body.intro #touch,body.cine #touch{opacity:0;poin
 #dead .logo{color:var(--blood);font-size:clamp(48px,12vw,110px)}
 
 #touch{position:fixed;inset:0;z-index:12;pointer-events:none}
-#joy{position:absolute;left:28px;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:130px;height:130px;border-radius:50%;
-  border:2px solid rgba(243,232,214,.35);background:rgba(12,10,9,.3);pointer-events:auto}
-#knob{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(243,232,214,.75)}
-.tb{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid rgba(243,232,214,.45);background:rgba(12,10,9,.45);
+#joyZone{position:absolute;left:0;bottom:0;width:46%;height:68%;pointer-events:auto}
+#joy{position:absolute;left:40px;bottom:calc(env(safe-area-inset-bottom,0px) + 34px);width:136px;height:136px;margin:0;border-radius:50%;
+  border:2px solid rgba(243,232,214,.3);background:radial-gradient(circle,rgba(12,10,9,.15),rgba(12,10,9,.4));pointer-events:none;opacity:.55;transition:opacity .2s}
+#joy.on{opacity:1;transition:none}
+#knob{position:absolute;left:40px;top:40px;width:56px;height:56px;border-radius:50%;background:rgba(243,232,214,.8);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.tb{position:absolute;width:64px;height:64px;border-radius:50%;border:2px solid rgba(243,232,214,.4);background:rgba(12,10,9,.4);backdrop-filter:blur(2px);
   color:var(--bone);font:800 12px var(--f-ui);pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center}
 .tb.hot{border-color:var(--brass);background:rgba(217,174,79,.35)}
-.tb.big{width:78px;height:78px;font-size:14px;border-color:rgba(200,50,58,.8);background:rgba(200,50,58,.35)}
-#bAtk{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
-#bJump{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
-#bRun{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
-#bAct{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 122px)}
-#bWpn{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 196px)}
+.tb.big{width:88px;height:88px;font-size:15px;border-color:rgba(200,50,58,.8);background:rgba(200,50,58,.35)}
+#bAtk{right:calc(env(safe-area-inset-right,0px) + 30px);bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
+#bJump{right:calc(env(safe-area-inset-right,0px) + 142px);bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+#bWpn{right:calc(env(safe-area-inset-right,0px) + 44px);bottom:calc(env(safe-area-inset-bottom,0px) + 140px);width:52px;height:52px;font-size:11px}
+#bAct{right:calc(env(safe-area-inset-right,0px) + 142px);bottom:calc(env(safe-area-inset-bottom,0px) + 104px);width:76px;height:76px;font-size:13px;display:none}
+#bAct.hot{display:flex}
 body.touch #help{display:none}
 @media (max-height:500px){ #obj{padding:6px 10px 8px;width:min(280px,calc(100vw - 32px - 150px))} #obj .txt{font-size:12px} #wanted{margin-top:4px;font-size:14px}
   #mapWrap{width:110px;height:110px} #hp{top:calc(env(safe-area-inset-top,0px) + 130px);width:110px} #weapon{top:calc(env(safe-area-inset-top,0px) + 144px)} #bSnd{top:calc(env(safe-area-inset-top,0px) + 186px)}
-  .tb{width:54px;height:54px} .tb.big{width:68px;height:68px} #joy{width:116px;height:116px} #knob{left:34px;top:34px} }
+  .tb{width:58px;height:58px} .tb.big{width:80px;height:80px} #bWpn{width:48px;height:48px;bottom:calc(env(safe-area-inset-bottom,0px) + 124px)} #bAct{width:68px;height:68px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px)} #joy{width:124px;height:124px} #knob{left:35px;top:35px;width:54px;height:54px} }
 @media (max-width:700px){ #help{display:none} #obj{width:calc(100vw - 32px - 160px)} #obj .txt{font-size:13px} }
 #choice{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6vh);transform:translateX(-50%);z-index:40;width:min(680px,calc(100vw - 32px));text-align:center;background:linear-gradient(180deg,rgba(10,8,8,.55),rgba(10,8,8,.9));border-top:2px solid var(--blood);padding:16px 16px 18px}
 #choice .q{font:500 clamp(16px,2.4vw,22px)/1.4 var(--f-drama);margin-bottom:12px;text-shadow:0 2px 8px #000}
@@ -153,11 +155,11 @@ body.touch #help{display:none}
 </div>
 
 <div id="touch" hidden>
+  <div id="joyZone"></div>
   <div id="joy"><div id="knob"></div></div>
   <div class="tb big" id="bAtk">אגרוף</div>
   <div class="tb" id="bAct">רכב</div>
   <div class="tb" id="bJump">קפוץ</div>
-  <div class="tb" id="bRun">ספרינט</div>
   <div class="tb" id="bWpn">נשק</div>
 </div>
 
@@ -200,6 +202,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { Water } from 'three/addons/objects/Water.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const $ = id => document.getElementById(id);
@@ -216,13 +221,13 @@ const TOUCH = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in wind
 const LOW = TOUCH;
 
 /* ───────── renderer, Pixar-style soft light + bloom ───────── */
-const renderer = new T.WebGLRenderer({ antialias: !LOW, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, LOW ? 1.4 : 1.75));
+const renderer = new T.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, LOW ? 1.5 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = T.SRGBColorSpace;
 $('game').appendChild(renderer.domElement);
 
@@ -230,12 +235,33 @@ const scene = new T.Scene();
 scene.fog = new T.Fog(0x161c2c, 35, LOW ? 260 : 330);
 const camera = new T.PerspectiveCamera(56, innerWidth / innerHeight, 0.1, 2600);
 
+/* post: MSAA scene → bloom → tone map → film grade (teal shadows, amber highlights, vignette, grain) */
 let composer = null;
-if (!LOW) {
-  composer = new EffectComposer(renderer);
+const GRADE = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vig: { value: 1.0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, vig; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5; float r = dot(d, d);
+      vec3 c = vec3(texture2D(tDiffuse, vUv - d * 0.0025).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv + d * 0.0025).b);
+      float l = dot(c, vec3(0.299,0.587,0.114));
+      c = mix(c, c * vec3(0.86,1.0,1.08), smoothstep(0.35, 0.0, l));   // teal shadows
+      c = mix(c, c * vec3(1.08,1.0,0.88), smoothstep(0.35, 0.9, l));   // amber highlights
+      c = mix(vec3(l), c, 1.08);                                         // a touch more colour
+      c = (c - 0.5) * 1.06 + 0.5;                                        // contrast
+      c *= 1.0 - vig * smoothstep(0.12, 0.62, r) * 0.75;                 // vignette
+      c += (hash(vUv * 1000.0 + time) - 0.5) * 0.035;                    // grain
+      gl_FragColor = vec4(max(c, 0.0), 1.0);
+    }` };
+let gradePass = null;
+{
+  const rt = new T.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: T.HalfFloatType, samples: LOW ? 2 : 4 });
+  composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / 2, innerHeight / 2), 0.62, 0.6, 0.62));
+  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / (LOW ? 3 : 2), innerHeight / (LOW ? 3 : 2)), 0.7, 0.55, 0.6));
   composer.addPass(new OutputPass());
+  gradePass = new ShaderPass(GRADE); composer.addPass(gradePass);
 }
 
 const sunDir = new T.Vector3(-0.42, 0.22, -0.88).normalize();
@@ -265,9 +291,9 @@ scene.add(sky);
   }
 }
 
-const hemi = new T.HemisphereLight(0x5a6c9a, 0x2a1c1c, 0.75);
+const hemi = new T.HemisphereLight(0x6a7cac, 0x3a2a24, 1.0);
 scene.add(hemi);
-const sun = new T.DirectionalLight(0xa9bcff, 0.75);
+const sun = new T.DirectionalLight(0xa9bcff, 0.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
 const SR = LOW ? 45 : 62;
@@ -433,31 +459,49 @@ function planarUV(geo, w, h, d) {
   uv.needsUpdate = true; return geo;
 }
 
-/* ───────── facades: warm storybook Istanbul palette ───────── */
+/* ───────── facades: Beyoğlu/Karaköy stone and plaster, tall shuttered windows, soot and rain streaks ───────── */
 function facade(wall, shutter, trim) {
-  const W = 256, H = 512;
-  const mk = (emit) => canvasTex(W, H, g => {
-    g.fillStyle = emit ? '#000' : wall; g.fillRect(0, 0, W, H);
-    if (!emit) for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(255,240,220,${srand() * 0.05})`; g.fillRect(srand() * W, srand() * H, srand() * 50, srand() * 50); }
-    for (let r = 1; r < 16; r++) {
-      if (!emit) { g.fillStyle = trim; g.fillRect(0, r * 32 - 3, W, 3); }
-      for (let k = 0; k < 8; k++) {
-        const x = k * 32 + 9, y = r * 32 + 6, w = 14, h = 20, lit = srand() < 0.5, open = srand() < 0.6;
-        if (emit) { if (lit) { g.fillStyle = srand() < 0.85 ? '#ffb963' : '#d6e6ff'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill(); } continue; }
-        g.fillStyle = trim; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, [9, 9, 2, 2]); g.fill();
-        g.fillStyle = lit ? '#ffd79a' : '#3b4b5c'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill();
-        if (!lit) { g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 2, y + 3, 3, 8); }
-        if (open) { g.fillStyle = shutter; g.fillRect(x - 7, y, 5, h); g.fillRect(x + w + 2, y, 5, h); }
-        if (r % 3 === 0 && srand() < 0.6) { g.fillStyle = '#7b4a2e'; g.fillRect(x - 3, y + h + 1, w + 6, 4); g.fillStyle = srand() < 0.5 ? '#e0566a' : '#f2c14e'; for (let f = 0; f < 4; f++) { g.beginPath(); g.arc(x + 1 + f * 4, y + h, 2.4, 0, TAU); g.fill(); } }
-      }
+  const W = LOW ? 256 : 512, H = W * 2, C = 8, R = 16, cw = W / C, rh = H / R, u = W / 256;
+  const plan = []; // one plan so colour, glow and depth line up exactly
+  for (let r = 1; r < R; r++) for (let k = 0; k < C; k++) plan.push({ r, k, lit: srand() < 0.42, warm: srand() < 0.85, open: srand() < 0.55, curtain: srand() < 0.5, balcony: r % 3 === 0 && srand() < 0.5 });
+  const win = (w) => ({ x: w.k * cw + cw * 0.28, y: w.r * rh + rh * 0.14, w: cw * 0.44, h: rh * 0.66 });
+  const color = canvasTex(W, H, g => {
+    g.fillStyle = wall; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 900 * u; i++) { const v = srand(); g.fillStyle = v < 0.5 ? `rgba(0,0,0,${srand() * 0.06})` : `rgba(255,248,235,${srand() * 0.05})`; g.fillRect(srand() * W, srand() * H, srand() * 18 * u, srand() * 6 * u); }
+    for (let i = 0; i < 40; i++) { const x = srand() * W, gr = g.createLinearGradient(0, srand() * H, 0, H); gr.addColorStop(0, 'rgba(20,16,12,0)'); gr.addColorStop(1, `rgba(20,16,12,${0.08 + srand() * 0.12})`); g.fillStyle = gr; g.fillRect(x, 0, (2 + srand() * 6) * u, H); }
+    const sootG = g.createLinearGradient(0, H * 0.75, 0, H); sootG.addColorStop(0, 'rgba(10,8,6,0)'); sootG.addColorStop(1, 'rgba(10,8,6,.35)'); g.fillStyle = sootG; g.fillRect(0, 0, W, H);
+    for (let r = 1; r < R; r++) { g.fillStyle = trim; g.fillRect(0, r * rh - 4 * u, W, 4 * u); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, r * rh, W, 2 * u); }
+    for (const w of plan) {
+      const { x, y, w: ww, h } = win(w);
+      g.fillStyle = trim; g.fillRect(x - 3 * u, y - 4 * u, ww + 6 * u, h + 7 * u);
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - 1 * u, y - 1 * u, ww + 2 * u, h + 2 * u);
+      if (w.lit) { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, w.warm ? '#ffcf86' : '#cfe0ff'); gr.addColorStop(1, w.warm ? '#e8964a' : '#8aa6d8'); g.fillStyle = gr; }
+      else g.fillStyle = '#1c232c';
+      g.fillRect(x, y, ww, h);
+      if (w.lit && w.curtain) { g.fillStyle = 'rgba(120,40,30,.55)'; g.fillRect(x, y, ww * 0.3, h); g.fillRect(x + ww * 0.7, y, ww * 0.3, h); }
+      g.fillStyle = w.lit ? 'rgba(60,35,20,.8)' : '#2a3038'; g.fillRect(x + ww / 2 - 1 * u, y, 2 * u, h); g.fillRect(x, y + h * 0.38, ww, 2 * u);
+      if (!w.lit) { g.fillStyle = 'rgba(160,180,210,.12)'; g.fillRect(x + 2 * u, y + 2 * u, ww * 0.3, h * 0.3); }
+      if (w.open) { g.fillStyle = shutter; for (const sx of [x - ww * 0.42 - 2 * u, x + ww + 2 * u]) { g.fillRect(sx, y, ww * 0.42, h); g.fillStyle = 'rgba(0,0,0,.25)'; for (let l = 0; l < 8; l++) g.fillRect(sx, y + l * h / 8, ww * 0.42, 1 * u); g.fillStyle = shutter; } }
+      if (w.balcony) { g.fillStyle = '#1e1d1c'; g.fillRect(x - 6 * u, y + h + 2 * u, ww + 12 * u, 2 * u); for (let b = 0; b <= 6; b++) g.fillRect(x - 6 * u + b * (ww + 12 * u) / 6, y + h - 8 * u, 1.5 * u, 10 * u); g.fillRect(x - 6 * u, y + h - 9 * u, ww + 12 * u, 1.5 * u); }
     }
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, H - rh * 0.9, W, rh * 0.9); // shop level in shadow
   }, true);
-  const m = new T.MeshStandardMaterial({ map: mk(false), emissiveMap: mk(true), emissive: 0xffffff, emissiveIntensity: 1.7, roughness: 0.88, color: 0x6a7088 });
-  return m;
+  const glow = canvasTex(W, H, g => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    for (const w of plan) if (w.lit) { const { x, y, w: ww, h } = win(w); g.fillStyle = w.warm ? '#ffb45c' : '#9fc0ff'; g.fillRect(x, y, ww, h); if (w.curtain) { g.fillStyle = '#5a1a10'; g.fillRect(x, y, ww * 0.3, h); g.fillRect(x + ww * 0.7, y, ww * 0.3, h); } g.fillStyle = '#000'; g.fillRect(x + ww / 2 - 1 * u, y, 2 * u, h); g.fillRect(x, y + h * 0.38, ww, 2 * u); }
+  }, true);
+  const bump = canvasTex(W, H, g => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 1400 * u; i++) { const v = 110 + srand() * 40; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(srand() * W, srand() * H, srand() * 6 * u, srand() * 3 * u); }
+    for (let r = 1; r < R; r++) { g.fillStyle = '#d8d8d8'; g.fillRect(0, r * rh - 4 * u, W, 4 * u); }
+    for (const w of plan) { const { x, y, w: ww, h } = win(w); g.fillStyle = '#c8c8c8'; g.fillRect(x - 3 * u, y - 4 * u, ww + 6 * u, h + 7 * u); g.fillStyle = '#202020'; g.fillRect(x, y, ww, h); }
+  }, true);
+  bump.colorSpace = T.NoColorSpace;
+  return new T.MeshStandardMaterial({ map: color, emissiveMap: glow, emissive: 0xffffff, emissiveIntensity: 1.6, bumpMap: bump, bumpScale: 2.2, roughness: 0.82, color: 0x8a8c98, envMapIntensity: 0.5 });
 }
 const FACADES = [
-  ['#f2b48a', '#2f7d7a', '#fbe3c8'], ['#f4d58d', '#c0473b', '#fff1cf'], ['#e8846b', '#2c5f8a', '#fbd9c5'], ['#9fd3c0', '#b8463a', '#effaf2'],
-  ['#8fc1d9', '#d9893b', '#eef7fb'], ['#c3a8d6', '#2f6b5c', '#f3eafa'], ['#d9774f', '#284c64', '#f7d6bf'], ['#f3e3c3', '#4b7d3a', '#fffaf0'],
+  ['#c9b79c', '#3b4a42', '#e2d6c2'], ['#b9a48a', '#5a3a2c', '#dccdb4'], ['#a88f74', '#2e3a48', '#d6c7ad'], ['#d4c4ad', '#4a3b30', '#ece2d0'],
+  ['#9a9a94', '#3a2c26', '#c8c6bc'], ['#b07e5f', '#2f3a3a', '#d9bea5'], ['#c2b8a3', '#5b2f28', '#e4dccb'], ['#8e7b68', '#2c3540', '#c4b49c'],
 ].map(([w, s, t]) => facade(w, s, t));
 const awningTex = ['#c0473b', '#2f7d7a', '#d9a53b', '#2c5f8a'].map(c => canvasTex(64, 32, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fff3e0' : c; g.fillRect(i * 8, 0, 8, 32); } }));
 function building(x0, x1, z0, z1, h, m) {
@@ -491,13 +535,22 @@ function building(x0, x1, z0, z1, h, m) {
 
 /* lamp light pools on the wet asphalt */
 const POOL = new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-const poolM = new T.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,170,80,.55)'); r.addColorStop(0.5, 'rgba(255,140,60,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }), transparent: true, blending: T.AdditiveBlending, depthWrite: false });
+const poolM = new T.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,170,80,.32)'); r.addColorStop(0.5, 'rgba(255,140,60,.1)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }), transparent: true, blending: T.AdditiveBlending, depthWrite: false });
 /* ground, sea, roads */
-const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), new T.MeshStandardMaterial({ color: 0x23242c, roughness: 0.16, metalness: 0.45 }));
+// wet asphalt: rain ripples in the normal map break the reflections into streaks
+const wetN = new T.TextureLoader().load('tex/waternormals.jpg', t => { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(220, 160); });
+const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), new T.MeshStandardMaterial({ color: 0x1d1e24, roughness: 0.4, metalness: 0.3, normalMap: wetN, normalScale: new T.Vector2(0.25, 0.25), envMapIntensity: 0.45 }));
 ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, 190); ground.receiveShadow = true; scene.add(ground);
-const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), new T.MeshStandardMaterial({ color: 0x3a3836, roughness: 0.22, metalness: 0.35 }));
+const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), new T.MeshStandardMaterial({ color: 0x34322f, roughness: 0.5, metalness: 0.2, normalMap: wetN, normalScale: new T.Vector2(0.25, 0.25), envMapIntensity: 0.45 }));
 dock.rotation.x = -Math.PI / 2; dock.position.set(0, 0.01, -303); dock.receiveShadow = true; scene.add(dock);
-const sea = new T.Mesh(new T.PlaneGeometry(5000, 2400, 1, 1), new T.MeshPhysicalMaterial({ color: 0x0a1a24, roughness: 0.08, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.1 }));
+// the Bosphorus: a real mirror of the city lights, broken up by moving ripples
+const waterN = new T.TextureLoader().load('tex/waternormals.jpg', t => { t.wrapS = t.wrapT = T.RepeatWrapping; });
+// phones get a cheaper sea that mirrors the captured street lights instead of re-rendering the city every frame
+const sea = LOW
+  ? new T.Mesh(new T.PlaneGeometry(5000, 2400), new T.MeshPhysicalMaterial({ color: 0x03121c, roughness: 0.12, metalness: 0.6, clearcoat: 1, clearcoatRoughness: 0.08, normalMap: waterN, normalScale: new T.Vector2(0.6, 0.6), envMapIntensity: 1.2 }))
+  : new Water(new T.PlaneGeometry(5000, 2400), { textureWidth: 768, textureHeight: 768, waterNormals: waterN,
+    sunDirection: new T.Vector3(-0.42, 0.5, -0.88).normalize(), sunColor: 0x8a9ccc, waterColor: 0x03121c, distortionScale: 2.2, fog: true, alpha: 1 });
+if (LOW) { waterN.repeat.set(60, 30); sea.material.uniforms = { time: { value: 0 } }; } else sea.material.uniforms.size.value = 3.5;
 sea.rotation.x = -Math.PI / 2; sea.position.set(0, -0.6, -1520); scene.add(sea);
 mesh(RBOX, mat(0xe5d3b8), scene, 0, -0.3, -320.5, 1400, 1.0, 1.0, false);
 addCol(-700, 700, -340, -319);
@@ -753,7 +806,7 @@ const TORSO = new T.LatheGeometry([[0, 0], [0.17, 0], [0.2, 0.05], [0.215, 0.15]
 const SKIRT = (top, bot, len) => new T.CylinderGeometry(top, bot, len, 24, 1, true);
 const PALM = new RoundedBoxGeometry(0.075, 0.085, 0.036, 3, 0.016);
 const TUFT = new T.ConeGeometry(0.03, 0.08, 12);
-const gunGeo = { body: new RoundedBoxGeometry(0.035, 0.07, 0.19, 2, 0.01), grip: new RoundedBoxGeometry(0.03, 0.11, 0.045, 2, 0.01) };
+const gunGeo = { slide: new RoundedBoxGeometry(0.03, 0.03, 0.19, 2, 0.006), frame: new RoundedBoxGeometry(0.027, 0.022, 0.15, 2, 0.005), grip: new RoundedBoxGeometry(0.03, 0.115, 0.05, 2, 0.01), guard: new T.TorusGeometry(0.019, 0.0035, 6, 16, Math.PI * 1.3), barrel: new T.CylinderGeometry(0.0075, 0.0075, 0.01, 12) };
 const flashM = new T.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95 });
 
 function buildHand(wr, skin, side) {
@@ -770,10 +823,16 @@ function buildHand(wr, skin, side) {
 }
 function buildGun(hand) {
   const g = grp(hand, 0, -0.08, 0.07); g.rotation.x = 0;
-  const m = mat(0x1b1c20, { r: 0.35, m: 0.7 });
-  mesh(gunGeo.body, m, g, 0, 0.03, 0.04, 1, 1, 1, false);
-  mesh(gunGeo.grip, m, g, 0, -0.02, -0.02, 1, 1, 1, false).rotation.x = 0.25;
-  const flash = mesh(SPHL, flashM, g, 0, 0.035, 0.17, 0.03, 0.03, 0.08, false); flash.visible = false;
+  const steel = mat(0x23252a, { r: 0.28, m: 0.85 }), poly = mat(0x141416, { r: 0.75 }), black = mat(0x0a0a0a, { r: 0.4, m: 0.6 });
+  mesh(gunGeo.slide, steel, g, 0, 0.045, 0.05, 1, 1, 1, false);
+  for (let k = 0; k < 6; k++) mesh(BOX, black, g, 0, 0.046, -0.03 + k * 0.006, 0.031, 0.026, 0.0025, false); // slide serrations
+  mesh(gunGeo.frame, poly, g, 0, 0.02, 0.035, 1, 1, 1, false);
+  mesh(gunGeo.grip, poly, g, 0, -0.035, -0.018, 1, 1, 1, false).rotation.x = 0.28;
+  const tg = mesh(gunGeo.guard, poly, g, 0, 0.004, 0.03, 1, 1, 1, false); tg.rotation.y = Math.PI / 2; tg.rotation.z = Math.PI * 0.85;
+  mesh(BOX, black, g, 0, 0.0, 0.026, 0.004, 0.02, 0.005, false).rotation.x = 0.3; // trigger
+  mesh(gunGeo.barrel, black, g, 0, 0.045, 0.146, 1, 1, 1, false).rotation.x = Math.PI / 2;
+  mesh(BOX, black, g, 0, 0.063, 0.135, 0.004, 0.006, 0.006, false); mesh(BOX, black, g, 0, 0.063, -0.04, 0.02, 0.006, 0.006, false);
+  const flash = mesh(SPHL, flashM, g, 0, 0.045, 0.19, 0.03, 0.03, 0.08, false); flash.visible = false;
   g.visible = false;
   return { g, flash };
 }
@@ -929,6 +988,10 @@ function setFist(h, k) {
 }
 /* procedural animation: gait, idle, combat layers, face */
 function animateHuman(h, dt, speed, st = {}) {
+  animateRig(h, dt, speed, st);
+  if (h.real) syncRealBody(h, dt, speed, st);
+}
+function animateRig(h, dt, speed, st) {
   const J = h.j; h.t += dt;
   // face: blinking, eyes, brows, jaw
   h.blink -= dt; if (h.blink < 0) { h.lidK = 1; h.blink = rnd(2, 5.5); }
@@ -1052,42 +1115,97 @@ function pointBone(bone, child, dir, w) {
   bone.updateMatrixWorld(true);
 }
 const findBone = (root, ...names) => { let hit = null; root.traverse(o => { if (hit || !o.isBone) return; const n = o.name.toLowerCase().replace(/^mixamorig[:_]?/, ''); if (names.includes(n)) hit = o; }); return hit; };
+/* which realistic model a look maps to: scanned characters (selim, demir, thugs) when shipped, Michelle for women;
+   anyone without a model keeps the procedural body */
+const REAL_MALE = 'models/soldier.glb', REAL_FEMALE = 'models/michelle.glb';
+function giveRealBody(h, look, role) {
+  const female = !!look.skirt || !!look.female;
+  const url = look.model || (role === 'gang' ? 'models/thug.glb' : female ? REAL_FEMALE : null);
+  if (!url) return;
+  attachRealBody(h, url, { height: (look.height || 1.78) * (female ? 0.97 : 1) * (role === 'gang' ? rnd(0.97, 1.04) : 1) });
+}
+const GLTF_CACHE = {};
+const loadGLTF = url => GLTF_CACHE[url] ||= new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej));
+/* retargeting: an invisible mocap skeleton plays Idle/Walk/Run; every frame its bone motion (relative to its own rest
+   pose) is transferred onto the character's skeleton, whatever its rest pose (T-pose mocap → A-pose scans) */
+const RT_BONES = ['hips', 'spine', 'spine1|spine01', 'spine2|spine02', 'neck', 'head',
+  'leftshoulder', 'leftarm', 'leftforearm', 'lefthand', 'rightshoulder', 'rightarm', 'rightforearm', 'righthand',
+  'leftupleg', 'leftleg', 'leftfoot', 'lefttoebase', 'rightupleg', 'rightleg', 'rightfoot', 'righttoebase'];
+const _rq = new T.Quaternion(), _rq2 = new T.Quaternion(), _rootQ = new T.Quaternion();
+const relQ = (bone, root, out) => { root.getWorldQuaternion(_rootQ).invert(); return bone.getWorldQuaternion(out).premultiply(_rootQ); };
+function buildRetarget(target, driver) {
+  target.updateMatrixWorld(true); driver.updateMatrixWorld(true);
+  const pairs = [];
+  for (const n of RT_BONES) {
+    const names = n.split('|'), t = findBone(target, ...names), d = findBone(driver, ...names);
+    if (!t || !d) continue;
+    pairs.push({ t, d, qt0: relQ(t, target, new T.Quaternion()), qs0inv: relQ(d, driver, new T.Quaternion()).invert(), pt0: t.position.clone(), ps0: d.position.clone() });
+  }
+  const hipsT = pairs[0]?.t, hipsD = pairs[0]?.d;
+  const k = hipsT && hipsD ? hipsT.getWorldPosition(new T.Vector3()).y / Math.max(1e-4, hipsD.getWorldPosition(new T.Vector3()).y) : 1;
+  return { pairs, k, scaleD: driver.getWorldScale(new T.Vector3()).y, scaleT: target.getWorldScale(new T.Vector3()).y };
+}
+function applyRetarget(rt, target, driver) {
+  driver.updateMatrixWorld(true);
+  target.getWorldQuaternion(_rootQ);
+  const rootQ = _rootQ.clone();
+  for (const p of rt.pairs) {
+    // wanted orientation of this bone, relative to the character root
+    relQ(p.d, driver, _rq).multiply(p.qs0inv).multiply(p.qt0);
+    _rq.premultiply(rootQ); // → world
+    p.t.parent.getWorldQuaternion(_rq2).invert();
+    p.t.quaternion.copy(_rq2.multiply(_rq));
+    p.t.updateMatrixWorld(true);
+  }
+  // hips bob/sway follows the mocap (vertical scaled to the character's leg length)
+  const h = rt.pairs[0];
+  if (h && h.t.parent) {
+    const dy = (h.d.position.y - h.ps0.y), dx = (h.d.position.x - h.ps0.x), dz = (h.d.position.z - h.ps0.z);
+    const f = rt.k * rt.scaleD / rt.scaleT;
+    h.t.position.set(h.pt0.x + dx * f * 0.3, h.pt0.y + dy * f, h.pt0.z + dz * f * 0.3);
+    h.t.updateMatrixWorld(true);
+  }
+}
+// realistic people: each human gets its own clone of a shared skinned model, animated by retargeted mocap
 function attachRealBody(h, url, opts = {}) {
-  new GLTFLoader().load(url, gltf => {
-    if (!gltf.animations.length) return; // needs at least idle/walk clips to replace the procedural rig
-    const model = gltf.scene;
+  Promise.all([loadGLTF(url), loadGLTF(opts.clips || REAL_MALE)]).then(([gltf, clipSrc]) => {
+    const clips = clipSrc.animations.filter(c => /^(Idle|Walk|Run)$/.test(c.name));
+    if (clips.length < 2 || h.dead) return;
+    const model = SkeletonUtils.clone(gltf.scene), driver = SkeletonUtils.clone(clipSrc.scene);
     model.traverse(o => {
       if (!o.isMesh) return;
       o.castShadow = true; o.frustumCulled = false;
       if (/visor/i.test(o.name)) { o.visible = false; return; }
-      if (opts.tint != null) { o.material = o.material.clone(); o.material.color.setHex(opts.tint); o.material.roughness = 0.8; o.material.metalness = 0.05; }
+      o.material = o.material.clone(); o.material.envMapIntensity = 0.6; o.material.metalness = Math.min(o.material.metalness ?? 0, 0.15);
+      if (o.material.emissiveMap) { o.material.emissiveMap = null; o.material.emissive?.setHex(0); }
+      if (opts.tint != null) o.material.color.setHex(opts.tint);
     });
     const B = n => findBone(model, ...n);
     model.updateMatrixWorld(true);
-    const top = B(['headtop_end', 'head']), tp = top.getWorldPosition(new T.Vector3()), ft = B(['lefttoebase', 'leftfoot']).getWorldPosition(new T.Vector3());
+    const top = B(['headtop_end', 'head_end', 'head']), tp = top.getWorldPosition(new T.Vector3()), ft = B(['lefttoebase', 'leftfoot']).getWorldPosition(new T.Vector3());
     const s = (opts.height || 1.78) / Math.max(0.1, tp.y - Math.min(0, ft.y - 0.08)); model.scale.setScalar(s);
     model.rotation.y = opts.yaw ?? 0;
     const holder = grp(h.root); holder.add(model);
+    h.root.updateMatrixWorld(true);
     const R = {
-      model, holder, hips: B(['hips']), spine: B(['spine2', 'spine1', 'chest']), head: B(['head']), headTop: B(['headtop_end']),
+      model, holder, driver, hips: B(['hips']), spine: B(['spine2', 'spine02', 'spine1', 'chest']), head: B(['head']), headTop: B(['headtop_end', 'head_end']),
       arm: [B(['leftarm']), B(['rightarm'])], fore: [B(['leftforearm']), B(['rightforearm'])], hand: [B(['lefthand']), B(['righthand'])],
       up: [B(['leftupleg']), B(['rightupleg'])], leg: [B(['leftleg']), B(['rightleg'])], foot: [B(['leftfoot']), B(['rightfoot'])],
-      mixer: new T.AnimationMixer(model), acts: {}, scale: s,
+      mixer: new T.AnimationMixer(driver), acts: {}, scale: s,
     };
-    for (const c of gltf.animations) { const a = R.mixer.clipAction(c); a.play(); a.setEffectiveWeight(c.name === 'Idle' ? 1 : 0); R.acts[c.name] = a; }
+    R.rt = buildRetarget(model, driver);
+    for (const c of clips) { const a = R.mixer.clipAction(c); a.play(); a.time = Math.random() * c.duration; a.weight = c.name === 'Idle' ? 1 : 0; a.setEffectiveWeight(a.weight); R.acts[c.name] = a; }
+    R.mixer.update(0.01); applyRetarget(R.rt, model, driver);
     // photographic head rides the head bone; the model's own head collapses to nothing
     if (opts.photo) {
       const fake = { head: new T.Group() }; photoHead(fake, opts.photo); R.photo = fake.head; scene.add(R.photo);
       R.photo.scale.setScalar(opts.headScale || 0.92);
-      model.updateMatrixWorld(true);
-      R.headQ0 = R.head.getWorldQuaternion(new T.Quaternion()).invert().multiply(h.root.getWorldQuaternion(new T.Quaternion()));
-      h.root.updateMatrixWorld(true);
       R.headQ0 = R.head.getWorldQuaternion(new T.Quaternion()).invert().multiply(holder.getWorldQuaternion(new T.Quaternion()));
     }
     h.body.visible = false;
-    if (h.gun) { scene.add(h.gun.g); }
+    if (h.gun) { scene.add(h.gun.g); h.gunFree = true; }
     h.real = R;
-  }, undefined, () => { /* model not shipped yet: keep the procedural body */ });
+  }).catch(e => { console.warn('real body', url, e && e.message); /* keep the procedural body */ });
 }
 const _f = new T.Vector3(), _r = new T.Vector3(), _u = new T.Vector3(0, 1, 0), _d1 = new T.Vector3(), _d2 = new T.Vector3(), _hq = new T.Quaternion(), _hp = new T.Vector3();
 function syncRealBody(h, dt, speed, st = {}) {
@@ -1103,6 +1221,7 @@ function syncRealBody(h, dt, speed, st = {}) {
     if (k === 'Walk') a.timeScale = clamp(speed / 1.5, 0.6, 1.6); if (k === 'Run') a.timeScale = clamp(speed / 5.2, 0.7, 1.4);
   }
   R.mixer.update(dt);
+  applyRetarget(R.rt, R.model, R.driver);
   // falls and knock-downs tip the whole body like the procedural rig
   R.holder.rotation.x = h.body.rotation.x; R.holder.position.y = h.body.position.y;
   R.model.updateMatrixWorld(true);
@@ -1226,6 +1345,31 @@ function buildCar(kind, color) {
   return { kind, s, g, body, wheels, pos: g.position, heading: 0, speed: 0, vel: new T.Vector3(), steer: 0, yaw: 0, acc: 0, pv: 0, driver: null, ai: null, police: false, stuck: 0, rev: 0, honk: 0, hp: 100 };
 }
 const cars = [];
+/* a real car model (glossy black paint, chrome, tinted glass) dressed over a car's physics body */
+function dressCar(c, url, opts = {}) {
+  loadGLTF(url).then(gltf => {
+    const m = gltf.scene.clone(true);
+    const paint = new T.MeshPhysicalMaterial({ color: opts.paint ?? 0x050507, metalness: 0.45, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 0.9 });
+    const chrome = new T.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.12, envMapIntensity: 1.2 });
+    const glass = new T.MeshPhysicalMaterial({ color: 0x0c1014, metalness: 0.3, roughness: 0.04, transparent: true, opacity: 0.5, clearcoat: 1, envMapIntensity: 1.5 });
+    const get = n => m.getObjectByName(n);
+    if (get('body')) get('body').material = paint;
+    for (const n of ['rim_fl', 'rim_fr', 'rim_rr', 'rim_rl', 'trim']) if (get(n)) get(n).material = chrome;
+    if (get('glass')) get('glass').material = glass;
+    m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals(); } });
+    const box = new T.Box3().setFromObject(m), size = box.getSize(new T.Vector3());
+    const k = c.s.L / size.z; m.scale.setScalar(k); m.position.y = -box.min.y * k; m.rotation.y = Math.PI; // model's nose points −z
+    for (const o of [...c.body.children]) if (o.isMesh) o.visible = false;
+    for (const w of c.wheels) w.pv.visible = false;
+    const ao = new T.Mesh(new T.PlaneGeometry(0.655 * 4 * k, 1.3 * 4 * k), new T.MeshBasicMaterial({ map: new T.TextureLoader().load('models/ferrari_ao.png'), blending: T.MultiplyBlending, toneMapped: false, transparent: true, depthWrite: false }));
+    ao.rotation.x = -Math.PI / 2; ao.position.y = 0.02; c.g.add(ao);
+    c.body.add(m);
+    c.fw = ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr'].map(get).filter(Boolean); c.fw.forEach(w => w.rotation.order = 'YXZ');
+    if (c.fw.length < 4) c.fw = null;
+    if (opts.seat) c.s = { ...c.s, seat: opts.seat };
+    c.real = m;
+  }).catch(e => console.warn('car model', e && e.message));
+}
 function spawnCar(kind, color, x, z, h) { const c = buildCar(kind, color); c.pos.set(x, 0, z); c.heading = h; c.g.rotation.y = h; cars.push(c); return c; }
 function removeCar(c) { scene.remove(c.g); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); }
 
@@ -1263,6 +1407,7 @@ function drive(c, thr, st, hb, dt) {
   c.g.rotation.y = c.heading;
   const roll = (c.vel.x * fx + c.vel.z * fz) * dt / s.wr;
   for (const w of c.wheels) { w.sp.rotation.x += roll; if (w.front) w.pv.rotation.y = c.steer; }
+  if (c.fw) c.fw.forEach((w, i) => { w.rotation.x = -c.wheels[i].sp.rotation.x; w.rotation.y = i < 2 ? c.steer : 0; });
   c.acc = lerp(c.acc, (c.speed - c.pv) / Math.max(dt, 1e-3), 0.1); c.pv = c.speed;
   c.body.rotation.z = lerp(c.body.rotation.z, clamp(c.yaw * c.speed * 0.014, -0.09, 0.09), 0.15);
   c.body.rotation.x = lerp(c.body.rotation.x, clamp(-c.acc * 0.006, -0.06, 0.06), 0.15);
@@ -1520,6 +1665,7 @@ function makeActor(faction, x, z, weapon, o = {}) {
   const look = faction === 'police' ? COP_LOOK() : GANG_LOOK();
   if (o.look) Object.assign(look, o.look);
   const h = createHuman({ ...look, low: actors.length > 6 && LOW });
+  giveRealBody(h, look, faction === 'police' ? 'cop' : 'gang');
   h.root.position.set(x, groundH(x, z), z); scene.add(h.root);
   h.gun.g.visible = weapon === 'pistol';
   const a = { h, pos: h.root.position, facing: o.facing ?? rnd(0, TAU), speed: 0, hp: o.hp ?? (weapon === 'pistol' ? 70 : 90), maxHp: 0, faction, weapon,
@@ -1527,7 +1673,7 @@ function makeActor(faction, x, z, weapon, o = {}) {
     dead: false, deadT: 0, tag: o.tag || null, scale: 1, reward: o.reward ?? Math.floor(rnd(40, 160)), turn: 0, attackHit: false };
   a.maxHp = a.hp; actors.push(a); return a;
 }
-function removeActor(a) { scene.remove(a.h.root); const i = actors.indexOf(a); if (i >= 0) actors.splice(i, 1); }
+function removeActor(a) { scene.remove(a.h.root); if (a.h.gunFree) scene.remove(a.h.gun.g); const i = actors.indexOf(a); if (i >= 0) actors.splice(i, 1); }
 function hostile(a) {
   if (a.dead) return false;
   if (a.faction === 'gang') return a.alert > 0;
@@ -1663,6 +1809,7 @@ function spawnPeds(n) {
   for (let i = 0; i < n; i++) {
     const look = PED_LOOKS[i % PED_LOOKS.length];
     const h = createHuman({ ...look, build: rnd(0.95, 1.18), height: rnd(1.62, 1.86), skin: pick([0xd29a72, 0xb87c56, 0xe0aa84, 0x9a6545]), low: true, eyes: pick([0x5a3418, 0x3a2a14, 0x4a6a3a]) });
+    giveRealBody(h, look, 'ped');
     scene.add(h.root);
     const p = { h, pos: h.root.position, spd: rnd(1.1, 1.5), dir: Math.random() < 0.5 ? 1 : -1, s: 0, cx: 0, cz: 0, state: 'walk', stateT: 10, hp: 40, facing: 0, flee: null, friend: null, scale: 1 };
     placePed(p); peds.push(p);
@@ -1771,25 +1918,29 @@ const S = { money: 0, bags: 0, mi: 0, si: 0, timer: 0, free: false, wanted: 0, s
 let mode = 'title';
 const START = new T.Vector3(-88, 0, -303);
 const player = { h: createHuman(REIS), pos: START.clone(), facing: Math.PI / 2, speed: 0, vy: 0, grounded: true, turn: 0, car: null, down: 0,
-  hp: 100, dead: false, deadT: 0, weapon: 'fist', hasPistol: false, ammo: 0, reserve: 0, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
+  hp: 100, dead: false, deadT: 0, weapon: 'pistol', hasPistol: true, ammo: 12, reserve: 60, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
   aiming: false, weaponOut: false, hurtT: 9, lock: null };
 scene.add(player.h.root);
+// film-set key light: a soft warm light that rides beside the camera so Benjo's black coat and face read at night
+const keyLight = new T.PointLight(0xffe2c4, 6, 10, 1.4); scene.add(keyLight);
 // the player's own rigged model (generated from his reference image); the procedural body stays until it is present
-attachRealBody(player.h, 'models/reis.glb', { height: 1.78, yaw: Math.PI });
+attachRealBody(player.h, 'models/benjo.glb', { height: 1.8 });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
 function npc(key, name, look, x, z, face, solid = true) {
   const h = createHuman(look); h.root.position.set(x, groundH(x, z), z); h.root.rotation.y = face; scene.add(h.root);
+  giveRealBody(h, look, 'npc');
   if (solid) addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
   NPC[key] = { h, name, pos: h.root.position, face };
 }
-npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412 }, -15, -272.6, Math.PI);
-npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08 }, 182, -303, 0, false);
+npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412, model: 'models/selim.glb' }, -15, -272.6, Math.PI);
+npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08, model: 'models/demir.glb' }, 182, -303, 0, false);
 const SPEAKER = { BENJO: () => player.h, 'SELİM': () => NPC.selim.h, 'DEMİR': () => NPC.demir.h };
 
 const blackCar = spawnCar('merc', 0x0c0c10, -84, -299, Math.PI / 2);
 const CAR_HOME = [-84, -299, Math.PI / 2];
+dressCar(blackCar, 'models/ferrari.glb', { seat: [0.36, 0.1, -0.05] });
 spawnCar('sahin', 0xf3e3c3, -46, -76.5, Math.PI / 2);
 spawnCar('taxi', 0xf2c014, -5, 75, -Math.PI / 2);
 
@@ -1926,12 +2077,19 @@ addEventListener('mousemove', e => {
 });
 const joy = { id: null, x: 0, y: 0, ox: 0, oy: 0 }, look = { id: null, x: 0, y: 0 };
 const joyEl = $('joy'), knob = $('knob');
-joyEl.addEventListener('pointerdown', e => { joy.id = e.pointerId; const r = joyEl.getBoundingClientRect(); joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; joyMove(e); joyEl.setPointerCapture(e.pointerId); });
-joyEl.addEventListener('pointermove', e => { if (e.pointerId === joy.id) joyMove(e); });
-const joyEnd = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; };
-joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+// floating stick: it appears wherever the left thumb lands; pushing it all the way runs
+const joyZone = $('joyZone');
+joyZone.addEventListener('pointerdown', e => {
+  if (joy.id != null) return;
+  joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY;
+  const w = joyEl.offsetWidth; joyEl.style.left = (e.clientX - w / 2) + 'px'; joyEl.style.top = (e.clientY - w / 2) + 'px'; joyEl.style.bottom = 'auto';
+  joyEl.classList.add('on'); joyMove(e); joyZone.setPointerCapture(e.pointerId);
+});
+joyZone.addEventListener('pointermove', e => { if (e.pointerId === joy.id) joyMove(e); });
+const joyEnd = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; joyEl.classList.remove('on'); joyEl.style.left = joyEl.style.top = joyEl.style.bottom = ''; };
+joyZone.addEventListener('pointerup', joyEnd); joyZone.addEventListener('pointercancel', joyEnd);
 function joyMove(e) {
-  let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), R = 52;
+  let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), R = 58;
   if (d > R) { dx *= R / d; dy *= R / d; }
   joy.x = dx / R; joy.y = -dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`;
 }
@@ -1947,7 +2105,6 @@ const btn = (id, down, up) => { const el = $(id); el.addEventListener('pointerdo
 let atkHeld = false;
 btn('bAct', () => { if (mode === 'cut') advanceDialog(true); else if (mode === 'play') interact(); });
 btn('bJump', () => { if (player.car) hbTouch = true; else jumpReq = true; }, () => hbTouch = false);
-btn('bRun', () => sprintTouch = true, () => sprintTouch = false);
 btn('bWpn', () => swapWeapon());
 btn('bAtk', () => { atkHeld = true; if (mode === 'play') attack(); }, () => atkHeld = false);
 $('dlg').addEventListener('click', () => advanceDialog(true));
@@ -2199,7 +2356,7 @@ function startStep() {
   if (st.auto) startDialog(st.dlg, NPC[st.npc], () => afterTalk(st));
   if (st.fight) startDialog(st.pre, NPC.demir, () => spawnFight(st.fight));
   if (st.escape) spawnFight('esc');
-  if (st.tip) toast('', TOUCH ? "ג'ויסטיק לתנועה · גרירה למצלמה · ספרינט לריצה" : 'WASD תנועה · Shift ריצה · עכבר מצלמה', 3600);
+  if (st.tip) toast('', TOUCH ? "אגודל שמאל בכל מקום לתנועה (עד הסוף = ריצה) · גרירה מימין למצלמה · ירי ננעל על המטרה הקרובה" : 'WASD תנועה · Shift ריצה · עכבר מצלמה · לחצן ימני כוונון · Q אקדח/אגרופים', 4200);
 }
 function afterTalk(st) {
   if (st.choice) { showChoice(st.choice, () => completeStep(true)); return; }
@@ -2219,7 +2376,7 @@ function spawnFight(kind) {
   if (kind === 'wh') {
     NPC.demir.h.root.visible = false;
     makeActor('gang', NPC.demir.pos.x, NPC.demir.pos.z, 'fist', { tag: 'wh', alert: true, hp: 140, reward: 300, facing: 0,
-      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a } });
+      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, model: 'models/demir.glb' } });
     for (const [x, z] of [[176, -309], [188, -309]]) makeActor('gang', x, z, 'fist', { tag: 'wh', alert: true, hp: 80, reward: 100 });
     combatK = 1;
   }
@@ -2510,8 +2667,8 @@ function updateFoot(dt) {
   // regenerate slowly after a while out of danger
   P.hurtT += dt; if (P.hurtT > 6 && P.hp < 60) P.hp = Math.min(60, P.hp + 4 * dt);
   const c = nearestCar(), sc = nearSimit();
-  setPrompt(c ? (TOUCH ? 'הקש "רכב" כדי להיכנס' : 'F — היכנס לרכב') : sc ? (TOUCH ? 'הקש "רכב" לסימיט ב־₺20' : 'F — סימיט ב־₺20 (+50 חיים)') : null);
-  $('bAct').classList.toggle('hot', !!(c || sc));
+  setPrompt(TOUCH ? null : c ? 'F — היכנס לרכב' : sc ? 'F — סימיט ב־₺20 (+50 חיים)' : null);
+  $('bAct').classList.toggle('hot', !!(c || sc)); $('bAct').textContent = c ? 'היכנס לרכב' : sc ? 'סימיט ₺20' : '';
 }
 function updateDrive(dt) {
   const c = player.car;
@@ -2530,7 +2687,7 @@ function updateDrive(dt) {
     eng.g.gain.setTargetAtTime(0.05 + Math.abs(thr) * 0.03, AC.currentTime, 0.1);
   }
   setPrompt(TOUCH ? null : (Math.abs(c.speed) < 6 ? 'F — צא מהרכב · H — צופר' : null));
-  $('bAct').classList.remove('hot');
+  $('bAct').classList.toggle('hot', Math.abs(c.speed) < 6); $('bAct').textContent = 'צא מהרכב';
 }
 function followCamera(dt) {
   const inCar = !!player.car, P = player;
@@ -2578,7 +2735,6 @@ function update(dt) {
   if (mode === 'play') { if (player.car) updateDrive(dt); else updateFoot(dt); }
   else if (!player.car) { animateHuman(player.h, dt, 0, { phone: !!(dlg && dlg.phone) }); player.h.root.rotation.y = player.facing; player.h.root.position.copy(player.pos); }
   else animateHuman(player.h, dt, 0, { seated: true, phone: !!(dlg && dlg.phone) });
-  syncRealBody(player.h, dt, player.car ? 0 : (mode === 'play' ? player.speed : 0), { seated: !!player.car, car: !!player.car });
   const pp = playerPos();
   const obstacles = cars.map(c => c.pos);
   const pObs = { x: pp.x, z: pp.z, isPlayer: true }; obstacles.push(pObs);
@@ -2604,6 +2760,7 @@ function update(dt) {
   }
   updateLipSync(); updateFX(dt); updateWanted(dt); updateTurf(dt); updateGPS(dt);
   updateRain(dt, camera.position); waveFlag(worldT);
+  sea.material.uniforms.time.value += dt * 0.5; if (LOW) waterN.offset.set(worldT * 0.004, worldT * 0.002); if (gradePass) gradePass.uniforms.time.value = worldT % 100;
   combatK = lerp(combatK, actors.some(a => hostile(a) && !a.dead && a.pos.distanceTo(pp) < 50) || S.wanted >= 2 ? 1 : 0, damp(0.8, dt));
   const now = performance.now() / 1000;
   for (const b of bags) {
@@ -2622,6 +2779,8 @@ function update(dt) {
   sun.position.set(fc.x + sunDir.x * 200, sunDir.y * 200, fc.z + sunDir.z * 200);
   sun.target.position.set(fc.x, 0, fc.z); sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
+  { const P = playerPos(), dx = camera.position.x - P.x, dz = camera.position.z - P.z, d = Math.hypot(dx, dz) || 1;
+    keyLight.position.set(P.x + dx / d * 2.2 - dz / d * 1.6, P.y + 2.6, P.z + dz / d * 2.2 + dx / d * 1.6); }
   // HUD
   $('money').firstChild.nodeValue = '₺ ' + S.money.toLocaleString('en-US');
   $('bags').textContent = `${S.bags}/12 שקים`;
@@ -2639,6 +2798,8 @@ function update(dt) {
   hitMarkT -= dt;
   $('bAtk').textContent = player.weapon === 'pistol' ? 'ירי' : 'אגרוף';
   $('bJump').textContent = player.car ? 'בלם יד' : 'קפוץ';
+  $('bWpn').textContent = player.weapon === 'pistol' ? 'אגרופים' : 'אקדח'; $('bWpn').style.display = player.car ? 'none' : '';
+  player.h.gun.g.visible = player.weapon === 'pistol' && !player.car && !player.dead && mode === 'play';
   hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
   $('hurt').style.opacity = Math.max(hurtFlash, player.hp < 30 && mode === 'play' ? 0.35 + Math.sin(now * 4) * 0.1 : 0);
 }
@@ -2654,6 +2815,17 @@ function loop(now) {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); });
 
 /* ───────── boot ───────── */
+// reflections: one capture of the real night street, so wet asphalt, paint and glass mirror the actual lights of Karaköy
+function captureEnv() {
+  const crt = new T.WebGLCubeRenderTarget(LOW ? 128 : 256, { type: T.HalfFloatType });
+  const cc = new T.CubeCamera(0.5, 900, crt); cc.position.set(-40, 3.5, -292);
+  // lamp bulbs are tamed for the capture so wet surfaces mirror the street, not blinding hot spots
+  const hot = []; scene.traverse(o => { const m = o.material; if (m && m.emissiveIntensity > 2) { hot.push([m, m.emissiveIntensity]); m.emissiveIntensity = Math.min(1.5, m.emissiveIntensity * 0.25); } });
+  rain.visible = false; sea.visible = false; cc.update(renderer, scene); sea.visible = true; rain.visible = true;
+  for (const [m, e] of hot) m.emissiveIntensity = e;
+  const pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromCubemap(crt.texture).texture; pm.dispose(); crt.dispose();
+}
+captureEnv();
 if (TOUCH) { document.body.classList.add('touch'); $('touch').hidden = false; $('keysInfo').textContent = 'ג׳ויסטיק לתנועה ונהיגה · גרירה לסיבוב מצלמה · "אגרוף/ירי" לתקיפה עם נעילה אוטומטית · "נשק" להחלפה'; }
 const startBtn = $('start');
 startBtn.disabled = false; startBtn.textContent = 'התחל משימה 01';
@@ -2676,7 +2848,7 @@ $('freeRoam').addEventListener('click', () => {
   $('ep').textContent = 'Serbest · עולם פתוח'; $('objTxt').textContent = 'איסטנבול בלילה. אסוף את שקי הכסף (ירוק במפה) ונקה את השטחים של אנשי מוראט (אדום).'; $('timer').hidden = true;
 });
 requestAnimationFrame(loop);
-window.__game = { S, player, cars, actors, peds, STORY, NPC_ITEMS: ITEM, blackCar, loadCheckpoint, choose: v => choiceCb?.(v), get dlg() { return dlg; }, gps: () => gps, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };
+window.__game = { scene, sea, composer, S, player, cars, actors, peds, STORY, NPC_ITEMS: ITEM, blackCar, loadCheckpoint, choose: v => choiceCb?.(v), get dlg() { return dlg; }, gps: () => gps, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };
 
 </script>
 </body>

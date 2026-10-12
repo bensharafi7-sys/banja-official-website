@@ -53,6 +53,7 @@ function makeActor(faction, x, z, weapon, o = {}) {
   const look = faction === 'police' ? COP_LOOK() : GANG_LOOK();
   if (o.look) Object.assign(look, o.look);
   const h = createHuman({ ...look, low: actors.length > 6 && LOW });
+  giveRealBody(h, look, faction === 'police' ? 'cop' : 'gang');
   h.root.position.set(x, groundH(x, z), z); scene.add(h.root);
   h.gun.g.visible = weapon === 'pistol';
   const a = { h, pos: h.root.position, facing: o.facing ?? rnd(0, TAU), speed: 0, hp: o.hp ?? (weapon === 'pistol' ? 70 : 90), maxHp: 0, faction, weapon,
@@ -60,7 +61,7 @@ function makeActor(faction, x, z, weapon, o = {}) {
     dead: false, deadT: 0, tag: o.tag || null, scale: 1, reward: o.reward ?? Math.floor(rnd(40, 160)), turn: 0, attackHit: false };
   a.maxHp = a.hp; actors.push(a); return a;
 }
-function removeActor(a) { scene.remove(a.h.root); const i = actors.indexOf(a); if (i >= 0) actors.splice(i, 1); }
+function removeActor(a) { scene.remove(a.h.root); if (a.h.gunFree) scene.remove(a.h.gun.g); const i = actors.indexOf(a); if (i >= 0) actors.splice(i, 1); }
 function hostile(a) {
   if (a.dead) return false;
   if (a.faction === 'gang') return a.alert > 0;
@@ -196,6 +197,7 @@ function spawnPeds(n) {
   for (let i = 0; i < n; i++) {
     const look = PED_LOOKS[i % PED_LOOKS.length];
     const h = createHuman({ ...look, build: rnd(0.95, 1.18), height: rnd(1.62, 1.86), skin: pick([0xd29a72, 0xb87c56, 0xe0aa84, 0x9a6545]), low: true, eyes: pick([0x5a3418, 0x3a2a14, 0x4a6a3a]) });
+    giveRealBody(h, look, 'ped');
     scene.add(h.root);
     const p = { h, pos: h.root.position, spd: rnd(1.1, 1.5), dir: Math.random() < 0.5 ? 1 : -1, s: 0, cx: 0, cz: 0, state: 'walk', stateT: 10, hp: 40, facing: 0, flee: null, friend: null, scale: 1 };
     placePed(p); peds.push(p);

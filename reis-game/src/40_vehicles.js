@@ -64,6 +64,31 @@ function buildCar(kind, color) {
   return { kind, s, g, body, wheels, pos: g.position, heading: 0, speed: 0, vel: new T.Vector3(), steer: 0, yaw: 0, acc: 0, pv: 0, driver: null, ai: null, police: false, stuck: 0, rev: 0, honk: 0, hp: 100 };
 }
 const cars = [];
+/* a real car model (glossy black paint, chrome, tinted glass) dressed over a car's physics body */
+function dressCar(c, url, opts = {}) {
+  loadGLTF(url).then(gltf => {
+    const m = gltf.scene.clone(true);
+    const paint = new T.MeshPhysicalMaterial({ color: opts.paint ?? 0x050507, metalness: 0.45, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 0.9 });
+    const chrome = new T.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.12, envMapIntensity: 1.2 });
+    const glass = new T.MeshPhysicalMaterial({ color: 0x0c1014, metalness: 0.3, roughness: 0.04, transparent: true, opacity: 0.5, clearcoat: 1, envMapIntensity: 1.5 });
+    const get = n => m.getObjectByName(n);
+    if (get('body')) get('body').material = paint;
+    for (const n of ['rim_fl', 'rim_fr', 'rim_rr', 'rim_rl', 'trim']) if (get(n)) get(n).material = chrome;
+    if (get('glass')) get('glass').material = glass;
+    m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals(); } });
+    const box = new T.Box3().setFromObject(m), size = box.getSize(new T.Vector3());
+    const k = c.s.L / size.z; m.scale.setScalar(k); m.position.y = -box.min.y * k; m.rotation.y = Math.PI; // model's nose points −z
+    for (const o of [...c.body.children]) if (o.isMesh) o.visible = false;
+    for (const w of c.wheels) w.pv.visible = false;
+    const ao = new T.Mesh(new T.PlaneGeometry(0.655 * 4 * k, 1.3 * 4 * k), new T.MeshBasicMaterial({ map: new T.TextureLoader().load('models/ferrari_ao.png'), blending: T.MultiplyBlending, toneMapped: false, transparent: true, depthWrite: false }));
+    ao.rotation.x = -Math.PI / 2; ao.position.y = 0.02; c.g.add(ao);
+    c.body.add(m);
+    c.fw = ['wheel_fl', 'wheel_fr', 'wheel_rl', 'wheel_rr'].map(get).filter(Boolean); c.fw.forEach(w => w.rotation.order = 'YXZ');
+    if (c.fw.length < 4) c.fw = null;
+    if (opts.seat) c.s = { ...c.s, seat: opts.seat };
+    c.real = m;
+  }).catch(e => console.warn('car model', e && e.message));
+}
 function spawnCar(kind, color, x, z, h) { const c = buildCar(kind, color); c.pos.set(x, 0, z); c.heading = h; c.g.rotation.y = h; cars.push(c); return c; }
 function removeCar(c) { scene.remove(c.g); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); }
 
@@ -101,6 +126,7 @@ function drive(c, thr, st, hb, dt) {
   c.g.rotation.y = c.heading;
   const roll = (c.vel.x * fx + c.vel.z * fz) * dt / s.wr;
   for (const w of c.wheels) { w.sp.rotation.x += roll; if (w.front) w.pv.rotation.y = c.steer; }
+  if (c.fw) c.fw.forEach((w, i) => { w.rotation.x = -c.wheels[i].sp.rotation.x; w.rotation.y = i < 2 ? c.steer : 0; });
   c.acc = lerp(c.acc, (c.speed - c.pv) / Math.max(dt, 1e-3), 0.1); c.pv = c.speed;
   c.body.rotation.z = lerp(c.body.rotation.z, clamp(c.yaw * c.speed * 0.014, -0.09, 0.09), 0.15);
   c.body.rotation.x = lerp(c.body.rotation.x, clamp(-c.acc * 0.006, -0.06, 0.06), 0.15);

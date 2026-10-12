@@ -4,25 +4,29 @@ const S = { money: 0, bags: 0, mi: 0, si: 0, timer: 0, free: false, wanted: 0, s
 let mode = 'title';
 const START = new T.Vector3(-88, 0, -303);
 const player = { h: createHuman(REIS), pos: START.clone(), facing: Math.PI / 2, speed: 0, vy: 0, grounded: true, turn: 0, car: null, down: 0,
-  hp: 100, dead: false, deadT: 0, weapon: 'fist', hasPistol: false, ammo: 0, reserve: 0, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
+  hp: 100, dead: false, deadT: 0, weapon: 'pistol', hasPistol: true, ammo: 12, reserve: 60, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
   aiming: false, weaponOut: false, hurtT: 9, lock: null };
 scene.add(player.h.root);
+// film-set key light: a soft warm light that rides beside the camera so Benjo's black coat and face read at night
+const keyLight = new T.PointLight(0xffe2c4, 6, 10, 1.4); scene.add(keyLight);
 // the player's own rigged model (generated from his reference image); the procedural body stays until it is present
-attachRealBody(player.h, 'models/reis.glb', { height: 1.78, yaw: Math.PI });
+attachRealBody(player.h, 'models/benjo.glb', { height: 1.8 });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
 function npc(key, name, look, x, z, face, solid = true) {
   const h = createHuman(look); h.root.position.set(x, groundH(x, z), z); h.root.rotation.y = face; scene.add(h.root);
+  giveRealBody(h, look, 'npc');
   if (solid) addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
   NPC[key] = { h, name, pos: h.root.position, face };
 }
-npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412 }, -15, -272.6, Math.PI);
-npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08 }, 182, -303, 0, false);
+npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412, model: 'models/selim.glb' }, -15, -272.6, Math.PI);
+npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08, model: 'models/demir.glb' }, 182, -303, 0, false);
 const SPEAKER = { BENJO: () => player.h, 'SELİM': () => NPC.selim.h, 'DEMİR': () => NPC.demir.h };
 
 const blackCar = spawnCar('merc', 0x0c0c10, -84, -299, Math.PI / 2);
 const CAR_HOME = [-84, -299, Math.PI / 2];
+dressCar(blackCar, 'models/ferrari.glb', { seat: [0.36, 0.1, -0.05] });
 spawnCar('sahin', 0xf3e3c3, -46, -76.5, Math.PI / 2);
 spawnCar('taxi', 0xf2c014, -5, 75, -Math.PI / 2);
 
@@ -159,12 +163,19 @@ addEventListener('mousemove', e => {
 });
 const joy = { id: null, x: 0, y: 0, ox: 0, oy: 0 }, look = { id: null, x: 0, y: 0 };
 const joyEl = $('joy'), knob = $('knob');
-joyEl.addEventListener('pointerdown', e => { joy.id = e.pointerId; const r = joyEl.getBoundingClientRect(); joy.ox = r.left + r.width / 2; joy.oy = r.top + r.height / 2; joyMove(e); joyEl.setPointerCapture(e.pointerId); });
-joyEl.addEventListener('pointermove', e => { if (e.pointerId === joy.id) joyMove(e); });
-const joyEnd = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; };
-joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+// floating stick: it appears wherever the left thumb lands; pushing it all the way runs
+const joyZone = $('joyZone');
+joyZone.addEventListener('pointerdown', e => {
+  if (joy.id != null) return;
+  joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY;
+  const w = joyEl.offsetWidth; joyEl.style.left = (e.clientX - w / 2) + 'px'; joyEl.style.top = (e.clientY - w / 2) + 'px'; joyEl.style.bottom = 'auto';
+  joyEl.classList.add('on'); joyMove(e); joyZone.setPointerCapture(e.pointerId);
+});
+joyZone.addEventListener('pointermove', e => { if (e.pointerId === joy.id) joyMove(e); });
+const joyEnd = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; joyEl.classList.remove('on'); joyEl.style.left = joyEl.style.top = joyEl.style.bottom = ''; };
+joyZone.addEventListener('pointerup', joyEnd); joyZone.addEventListener('pointercancel', joyEnd);
 function joyMove(e) {
-  let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), R = 52;
+  let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy), R = 58;
   if (d > R) { dx *= R / d; dy *= R / d; }
   joy.x = dx / R; joy.y = -dy / R; knob.style.transform = `translate(${dx}px,${dy}px)`;
 }
@@ -180,7 +191,6 @@ const btn = (id, down, up) => { const el = $(id); el.addEventListener('pointerdo
 let atkHeld = false;
 btn('bAct', () => { if (mode === 'cut') advanceDialog(true); else if (mode === 'play') interact(); });
 btn('bJump', () => { if (player.car) hbTouch = true; else jumpReq = true; }, () => hbTouch = false);
-btn('bRun', () => sprintTouch = true, () => sprintTouch = false);
 btn('bWpn', () => swapWeapon());
 btn('bAtk', () => { atkHeld = true; if (mode === 'play') attack(); }, () => atkHeld = false);
 $('dlg').addEventListener('click', () => advanceDialog(true));
@@ -432,7 +442,7 @@ function startStep() {
   if (st.auto) startDialog(st.dlg, NPC[st.npc], () => afterTalk(st));
   if (st.fight) startDialog(st.pre, NPC.demir, () => spawnFight(st.fight));
   if (st.escape) spawnFight('esc');
-  if (st.tip) toast('', TOUCH ? "ג'ויסטיק לתנועה · גרירה למצלמה · ספרינט לריצה" : 'WASD תנועה · Shift ריצה · עכבר מצלמה', 3600);
+  if (st.tip) toast('', TOUCH ? "אגודל שמאל בכל מקום לתנועה (עד הסוף = ריצה) · גרירה מימין למצלמה · ירי ננעל על המטרה הקרובה" : 'WASD תנועה · Shift ריצה · עכבר מצלמה · לחצן ימני כוונון · Q אקדח/אגרופים', 4200);
 }
 function afterTalk(st) {
   if (st.choice) { showChoice(st.choice, () => completeStep(true)); return; }
@@ -452,7 +462,7 @@ function spawnFight(kind) {
   if (kind === 'wh') {
     NPC.demir.h.root.visible = false;
     makeActor('gang', NPC.demir.pos.x, NPC.demir.pos.z, 'fist', { tag: 'wh', alert: true, hp: 140, reward: 300, facing: 0,
-      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a } });
+      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, model: 'models/demir.glb' } });
     for (const [x, z] of [[176, -309], [188, -309]]) makeActor('gang', x, z, 'fist', { tag: 'wh', alert: true, hp: 80, reward: 100 });
     combatK = 1;
   }
@@ -743,8 +753,8 @@ function updateFoot(dt) {
   // regenerate slowly after a while out of danger
   P.hurtT += dt; if (P.hurtT > 6 && P.hp < 60) P.hp = Math.min(60, P.hp + 4 * dt);
   const c = nearestCar(), sc = nearSimit();
-  setPrompt(c ? (TOUCH ? 'הקש "רכב" כדי להיכנס' : 'F — היכנס לרכב') : sc ? (TOUCH ? 'הקש "רכב" לסימיט ב־₺20' : 'F — סימיט ב־₺20 (+50 חיים)') : null);
-  $('bAct').classList.toggle('hot', !!(c || sc));
+  setPrompt(TOUCH ? null : c ? 'F — היכנס לרכב' : sc ? 'F — סימיט ב־₺20 (+50 חיים)' : null);
+  $('bAct').classList.toggle('hot', !!(c || sc)); $('bAct').textContent = c ? 'היכנס לרכב' : sc ? 'סימיט ₺20' : '';
 }
 function updateDrive(dt) {
   const c = player.car;
@@ -763,7 +773,7 @@ function updateDrive(dt) {
     eng.g.gain.setTargetAtTime(0.05 + Math.abs(thr) * 0.03, AC.currentTime, 0.1);
   }
   setPrompt(TOUCH ? null : (Math.abs(c.speed) < 6 ? 'F — צא מהרכב · H — צופר' : null));
-  $('bAct').classList.remove('hot');
+  $('bAct').classList.toggle('hot', Math.abs(c.speed) < 6); $('bAct').textContent = 'צא מהרכב';
 }
 function followCamera(dt) {
   const inCar = !!player.car, P = player;
@@ -811,7 +821,6 @@ function update(dt) {
   if (mode === 'play') { if (player.car) updateDrive(dt); else updateFoot(dt); }
   else if (!player.car) { animateHuman(player.h, dt, 0, { phone: !!(dlg && dlg.phone) }); player.h.root.rotation.y = player.facing; player.h.root.position.copy(player.pos); }
   else animateHuman(player.h, dt, 0, { seated: true, phone: !!(dlg && dlg.phone) });
-  syncRealBody(player.h, dt, player.car ? 0 : (mode === 'play' ? player.speed : 0), { seated: !!player.car, car: !!player.car });
   const pp = playerPos();
   const obstacles = cars.map(c => c.pos);
   const pObs = { x: pp.x, z: pp.z, isPlayer: true }; obstacles.push(pObs);
@@ -837,6 +846,7 @@ function update(dt) {
   }
   updateLipSync(); updateFX(dt); updateWanted(dt); updateTurf(dt); updateGPS(dt);
   updateRain(dt, camera.position); waveFlag(worldT);
+  sea.material.uniforms.time.value += dt * 0.5; if (LOW) waterN.offset.set(worldT * 0.004, worldT * 0.002); if (gradePass) gradePass.uniforms.time.value = worldT % 100;
   combatK = lerp(combatK, actors.some(a => hostile(a) && !a.dead && a.pos.distanceTo(pp) < 50) || S.wanted >= 2 ? 1 : 0, damp(0.8, dt));
   const now = performance.now() / 1000;
   for (const b of bags) {
@@ -855,6 +865,8 @@ function update(dt) {
   sun.position.set(fc.x + sunDir.x * 200, sunDir.y * 200, fc.z + sunDir.z * 200);
   sun.target.position.set(fc.x, 0, fc.z); sun.target.updateMatrixWorld();
   sky.position.copy(camera.position);
+  { const P = playerPos(), dx = camera.position.x - P.x, dz = camera.position.z - P.z, d = Math.hypot(dx, dz) || 1;
+    keyLight.position.set(P.x + dx / d * 2.2 - dz / d * 1.6, P.y + 2.6, P.z + dz / d * 2.2 + dx / d * 1.6); }
   // HUD
   $('money').firstChild.nodeValue = '₺ ' + S.money.toLocaleString('en-US');
   $('bags').textContent = `${S.bags}/12 שקים`;
@@ -872,6 +884,8 @@ function update(dt) {
   hitMarkT -= dt;
   $('bAtk').textContent = player.weapon === 'pistol' ? 'ירי' : 'אגרוף';
   $('bJump').textContent = player.car ? 'בלם יד' : 'קפוץ';
+  $('bWpn').textContent = player.weapon === 'pistol' ? 'אגרופים' : 'אקדח'; $('bWpn').style.display = player.car ? 'none' : '';
+  player.h.gun.g.visible = player.weapon === 'pistol' && !player.car && !player.dead && mode === 'play';
   hurtFlash = Math.max(0, hurtFlash - dt * 1.5);
   $('hurt').style.opacity = Math.max(hurtFlash, player.hp < 30 && mode === 'play' ? 0.35 + Math.sin(now * 4) * 0.1 : 0);
 }
@@ -887,6 +901,17 @@ function loop(now) {
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); });
 
 /* ───────── boot ───────── */
+// reflections: one capture of the real night street, so wet asphalt, paint and glass mirror the actual lights of Karaköy
+function captureEnv() {
+  const crt = new T.WebGLCubeRenderTarget(LOW ? 128 : 256, { type: T.HalfFloatType });
+  const cc = new T.CubeCamera(0.5, 900, crt); cc.position.set(-40, 3.5, -292);
+  // lamp bulbs are tamed for the capture so wet surfaces mirror the street, not blinding hot spots
+  const hot = []; scene.traverse(o => { const m = o.material; if (m && m.emissiveIntensity > 2) { hot.push([m, m.emissiveIntensity]); m.emissiveIntensity = Math.min(1.5, m.emissiveIntensity * 0.25); } });
+  rain.visible = false; sea.visible = false; cc.update(renderer, scene); sea.visible = true; rain.visible = true;
+  for (const [m, e] of hot) m.emissiveIntensity = e;
+  const pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromCubemap(crt.texture).texture; pm.dispose(); crt.dispose();
+}
+captureEnv();
 if (TOUCH) { document.body.classList.add('touch'); $('touch').hidden = false; $('keysInfo').textContent = 'ג׳ויסטיק לתנועה ונהיגה · גרירה לסיבוב מצלמה · "אגרוף/ירי" לתקיפה עם נעילה אוטומטית · "נשק" להחלפה'; }
 const startBtn = $('start');
 startBtn.disabled = false; startBtn.textContent = 'התחל משימה 01';
@@ -909,4 +934,4 @@ $('freeRoam').addEventListener('click', () => {
   $('ep').textContent = 'Serbest · עולם פתוח'; $('objTxt').textContent = 'איסטנבול בלילה. אסוף את שקי הכסף (ירוק במפה) ונקה את השטחים של אנשי מוראט (אדום).'; $('timer').hidden = true;
 });
 requestAnimationFrame(loop);
-window.__game = { S, player, cars, actors, peds, STORY, NPC_ITEMS: ITEM, blackCar, loadCheckpoint, choose: v => choiceCb?.(v), get dlg() { return dlg; }, gps: () => gps, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };
+window.__game = { scene, sea, composer, S, player, cars, actors, peds, STORY, NPC_ITEMS: ITEM, blackCar, loadCheckpoint, choose: v => choiceCb?.(v), get dlg() { return dlg; }, gps: () => gps, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };

@@ -1,29 +1,47 @@
 
-/* ───────── facades: warm storybook Istanbul palette ───────── */
+/* ───────── facades: Beyoğlu/Karaköy stone and plaster, tall shuttered windows, soot and rain streaks ───────── */
 function facade(wall, shutter, trim) {
-  const W = 256, H = 512;
-  const mk = (emit) => canvasTex(W, H, g => {
-    g.fillStyle = emit ? '#000' : wall; g.fillRect(0, 0, W, H);
-    if (!emit) for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(255,240,220,${srand() * 0.05})`; g.fillRect(srand() * W, srand() * H, srand() * 50, srand() * 50); }
-    for (let r = 1; r < 16; r++) {
-      if (!emit) { g.fillStyle = trim; g.fillRect(0, r * 32 - 3, W, 3); }
-      for (let k = 0; k < 8; k++) {
-        const x = k * 32 + 9, y = r * 32 + 6, w = 14, h = 20, lit = srand() < 0.5, open = srand() < 0.6;
-        if (emit) { if (lit) { g.fillStyle = srand() < 0.85 ? '#ffb963' : '#d6e6ff'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill(); } continue; }
-        g.fillStyle = trim; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, [9, 9, 2, 2]); g.fill();
-        g.fillStyle = lit ? '#ffd79a' : '#3b4b5c'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill();
-        if (!lit) { g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x + 2, y + 3, 3, 8); }
-        if (open) { g.fillStyle = shutter; g.fillRect(x - 7, y, 5, h); g.fillRect(x + w + 2, y, 5, h); }
-        if (r % 3 === 0 && srand() < 0.6) { g.fillStyle = '#7b4a2e'; g.fillRect(x - 3, y + h + 1, w + 6, 4); g.fillStyle = srand() < 0.5 ? '#e0566a' : '#f2c14e'; for (let f = 0; f < 4; f++) { g.beginPath(); g.arc(x + 1 + f * 4, y + h, 2.4, 0, TAU); g.fill(); } }
-      }
+  const W = LOW ? 256 : 512, H = W * 2, C = 8, R = 16, cw = W / C, rh = H / R, u = W / 256;
+  const plan = []; // one plan so colour, glow and depth line up exactly
+  for (let r = 1; r < R; r++) for (let k = 0; k < C; k++) plan.push({ r, k, lit: srand() < 0.42, warm: srand() < 0.85, open: srand() < 0.55, curtain: srand() < 0.5, balcony: r % 3 === 0 && srand() < 0.5 });
+  const win = (w) => ({ x: w.k * cw + cw * 0.28, y: w.r * rh + rh * 0.14, w: cw * 0.44, h: rh * 0.66 });
+  const color = canvasTex(W, H, g => {
+    g.fillStyle = wall; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 900 * u; i++) { const v = srand(); g.fillStyle = v < 0.5 ? `rgba(0,0,0,${srand() * 0.06})` : `rgba(255,248,235,${srand() * 0.05})`; g.fillRect(srand() * W, srand() * H, srand() * 18 * u, srand() * 6 * u); }
+    for (let i = 0; i < 40; i++) { const x = srand() * W, gr = g.createLinearGradient(0, srand() * H, 0, H); gr.addColorStop(0, 'rgba(20,16,12,0)'); gr.addColorStop(1, `rgba(20,16,12,${0.08 + srand() * 0.12})`); g.fillStyle = gr; g.fillRect(x, 0, (2 + srand() * 6) * u, H); }
+    const sootG = g.createLinearGradient(0, H * 0.75, 0, H); sootG.addColorStop(0, 'rgba(10,8,6,0)'); sootG.addColorStop(1, 'rgba(10,8,6,.35)'); g.fillStyle = sootG; g.fillRect(0, 0, W, H);
+    for (let r = 1; r < R; r++) { g.fillStyle = trim; g.fillRect(0, r * rh - 4 * u, W, 4 * u); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, r * rh, W, 2 * u); }
+    for (const w of plan) {
+      const { x, y, w: ww, h } = win(w);
+      g.fillStyle = trim; g.fillRect(x - 3 * u, y - 4 * u, ww + 6 * u, h + 7 * u);
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - 1 * u, y - 1 * u, ww + 2 * u, h + 2 * u);
+      if (w.lit) { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, w.warm ? '#ffcf86' : '#cfe0ff'); gr.addColorStop(1, w.warm ? '#e8964a' : '#8aa6d8'); g.fillStyle = gr; }
+      else g.fillStyle = '#1c232c';
+      g.fillRect(x, y, ww, h);
+      if (w.lit && w.curtain) { g.fillStyle = 'rgba(120,40,30,.55)'; g.fillRect(x, y, ww * 0.3, h); g.fillRect(x + ww * 0.7, y, ww * 0.3, h); }
+      g.fillStyle = w.lit ? 'rgba(60,35,20,.8)' : '#2a3038'; g.fillRect(x + ww / 2 - 1 * u, y, 2 * u, h); g.fillRect(x, y + h * 0.38, ww, 2 * u);
+      if (!w.lit) { g.fillStyle = 'rgba(160,180,210,.12)'; g.fillRect(x + 2 * u, y + 2 * u, ww * 0.3, h * 0.3); }
+      if (w.open) { g.fillStyle = shutter; for (const sx of [x - ww * 0.42 - 2 * u, x + ww + 2 * u]) { g.fillRect(sx, y, ww * 0.42, h); g.fillStyle = 'rgba(0,0,0,.25)'; for (let l = 0; l < 8; l++) g.fillRect(sx, y + l * h / 8, ww * 0.42, 1 * u); g.fillStyle = shutter; } }
+      if (w.balcony) { g.fillStyle = '#1e1d1c'; g.fillRect(x - 6 * u, y + h + 2 * u, ww + 12 * u, 2 * u); for (let b = 0; b <= 6; b++) g.fillRect(x - 6 * u + b * (ww + 12 * u) / 6, y + h - 8 * u, 1.5 * u, 10 * u); g.fillRect(x - 6 * u, y + h - 9 * u, ww + 12 * u, 1.5 * u); }
     }
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(0, H - rh * 0.9, W, rh * 0.9); // shop level in shadow
   }, true);
-  const m = new T.MeshStandardMaterial({ map: mk(false), emissiveMap: mk(true), emissive: 0xffffff, emissiveIntensity: 1.7, roughness: 0.88, color: 0x6a7088 });
-  return m;
+  const glow = canvasTex(W, H, g => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    for (const w of plan) if (w.lit) { const { x, y, w: ww, h } = win(w); g.fillStyle = w.warm ? '#ffb45c' : '#9fc0ff'; g.fillRect(x, y, ww, h); if (w.curtain) { g.fillStyle = '#5a1a10'; g.fillRect(x, y, ww * 0.3, h); g.fillRect(x + ww * 0.7, y, ww * 0.3, h); } g.fillStyle = '#000'; g.fillRect(x + ww / 2 - 1 * u, y, 2 * u, h); g.fillRect(x, y + h * 0.38, ww, 2 * u); }
+  }, true);
+  const bump = canvasTex(W, H, g => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 1400 * u; i++) { const v = 110 + srand() * 40; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(srand() * W, srand() * H, srand() * 6 * u, srand() * 3 * u); }
+    for (let r = 1; r < R; r++) { g.fillStyle = '#d8d8d8'; g.fillRect(0, r * rh - 4 * u, W, 4 * u); }
+    for (const w of plan) { const { x, y, w: ww, h } = win(w); g.fillStyle = '#c8c8c8'; g.fillRect(x - 3 * u, y - 4 * u, ww + 6 * u, h + 7 * u); g.fillStyle = '#202020'; g.fillRect(x, y, ww, h); }
+  }, true);
+  bump.colorSpace = T.NoColorSpace;
+  return new T.MeshStandardMaterial({ map: color, emissiveMap: glow, emissive: 0xffffff, emissiveIntensity: 1.6, bumpMap: bump, bumpScale: 2.2, roughness: 0.82, color: 0x8a8c98, envMapIntensity: 0.5 });
 }
 const FACADES = [
-  ['#f2b48a', '#2f7d7a', '#fbe3c8'], ['#f4d58d', '#c0473b', '#fff1cf'], ['#e8846b', '#2c5f8a', '#fbd9c5'], ['#9fd3c0', '#b8463a', '#effaf2'],
-  ['#8fc1d9', '#d9893b', '#eef7fb'], ['#c3a8d6', '#2f6b5c', '#f3eafa'], ['#d9774f', '#284c64', '#f7d6bf'], ['#f3e3c3', '#4b7d3a', '#fffaf0'],
+  ['#c9b79c', '#3b4a42', '#e2d6c2'], ['#b9a48a', '#5a3a2c', '#dccdb4'], ['#a88f74', '#2e3a48', '#d6c7ad'], ['#d4c4ad', '#4a3b30', '#ece2d0'],
+  ['#9a9a94', '#3a2c26', '#c8c6bc'], ['#b07e5f', '#2f3a3a', '#d9bea5'], ['#c2b8a3', '#5b2f28', '#e4dccb'], ['#8e7b68', '#2c3540', '#c4b49c'],
 ].map(([w, s, t]) => facade(w, s, t));
 const awningTex = ['#c0473b', '#2f7d7a', '#d9a53b', '#2c5f8a'].map(c => canvasTex(64, 32, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fff3e0' : c; g.fillRect(i * 8, 0, 8, 32); } }));
 function building(x0, x1, z0, z1, h, m) {
@@ -57,13 +75,22 @@ function building(x0, x1, z0, z1, h, m) {
 
 /* lamp light pools on the wet asphalt */
 const POOL = new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-const poolM = new T.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,170,80,.55)'); r.addColorStop(0.5, 'rgba(255,140,60,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }), transparent: true, blending: T.AdditiveBlending, depthWrite: false });
+const poolM = new T.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,170,80,.32)'); r.addColorStop(0.5, 'rgba(255,140,60,.1)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }), transparent: true, blending: T.AdditiveBlending, depthWrite: false });
 /* ground, sea, roads */
-const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), new T.MeshStandardMaterial({ color: 0x23242c, roughness: 0.16, metalness: 0.45 }));
+// wet asphalt: rain ripples in the normal map break the reflections into streaks
+const wetN = new T.TextureLoader().load('tex/waternormals.jpg', t => { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(220, 160); });
+const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), new T.MeshStandardMaterial({ color: 0x1d1e24, roughness: 0.4, metalness: 0.3, normalMap: wetN, normalScale: new T.Vector2(0.25, 0.25), envMapIntensity: 0.45 }));
 ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, 190); ground.receiveShadow = true; scene.add(ground);
-const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), new T.MeshStandardMaterial({ color: 0x3a3836, roughness: 0.22, metalness: 0.35 }));
+const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), new T.MeshStandardMaterial({ color: 0x34322f, roughness: 0.5, metalness: 0.2, normalMap: wetN, normalScale: new T.Vector2(0.25, 0.25), envMapIntensity: 0.45 }));
 dock.rotation.x = -Math.PI / 2; dock.position.set(0, 0.01, -303); dock.receiveShadow = true; scene.add(dock);
-const sea = new T.Mesh(new T.PlaneGeometry(5000, 2400, 1, 1), new T.MeshPhysicalMaterial({ color: 0x0a1a24, roughness: 0.08, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.1 }));
+// the Bosphorus: a real mirror of the city lights, broken up by moving ripples
+const waterN = new T.TextureLoader().load('tex/waternormals.jpg', t => { t.wrapS = t.wrapT = T.RepeatWrapping; });
+// phones get a cheaper sea that mirrors the captured street lights instead of re-rendering the city every frame
+const sea = LOW
+  ? new T.Mesh(new T.PlaneGeometry(5000, 2400), new T.MeshPhysicalMaterial({ color: 0x03121c, roughness: 0.12, metalness: 0.6, clearcoat: 1, clearcoatRoughness: 0.08, normalMap: waterN, normalScale: new T.Vector2(0.6, 0.6), envMapIntensity: 1.2 }))
+  : new Water(new T.PlaneGeometry(5000, 2400), { textureWidth: 768, textureHeight: 768, waterNormals: waterN,
+    sunDirection: new T.Vector3(-0.42, 0.5, -0.88).normalize(), sunColor: 0x8a9ccc, waterColor: 0x03121c, distortionScale: 2.2, fog: true, alpha: 1 });
+if (LOW) { waterN.repeat.set(60, 30); sea.material.uniforms = { time: { value: 0 } }; } else sea.material.uniforms.size.value = 3.5;
 sea.rotation.x = -Math.PI / 2; sea.position.set(0, -0.6, -1520); scene.add(sea);
 mesh(RBOX, mat(0xe5d3b8), scene, 0, -0.3, -320.5, 1400, 1.0, 1.0, false);
 addCol(-700, 700, -340, -319);

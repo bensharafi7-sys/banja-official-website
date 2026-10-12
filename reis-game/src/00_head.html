@@ -104,22 +104,24 @@ body.cine .hud,body.intro .hud,body.intro #touch,body.cine #touch{opacity:0;poin
 #dead .logo{color:var(--blood);font-size:clamp(48px,12vw,110px)}
 
 #touch{position:fixed;inset:0;z-index:12;pointer-events:none}
-#joy{position:absolute;left:28px;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);width:130px;height:130px;border-radius:50%;
-  border:2px solid rgba(243,232,214,.35);background:rgba(12,10,9,.3);pointer-events:auto}
-#knob{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(243,232,214,.75)}
-.tb{position:absolute;width:62px;height:62px;border-radius:50%;border:2px solid rgba(243,232,214,.45);background:rgba(12,10,9,.45);
+#joyZone{position:absolute;left:0;bottom:0;width:46%;height:68%;pointer-events:auto}
+#joy{position:absolute;left:40px;bottom:calc(env(safe-area-inset-bottom,0px) + 34px);width:136px;height:136px;margin:0;border-radius:50%;
+  border:2px solid rgba(243,232,214,.3);background:radial-gradient(circle,rgba(12,10,9,.15),rgba(12,10,9,.4));pointer-events:none;opacity:.55;transition:opacity .2s}
+#joy.on{opacity:1;transition:none}
+#knob{position:absolute;left:40px;top:40px;width:56px;height:56px;border-radius:50%;background:rgba(243,232,214,.8);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.tb{position:absolute;width:64px;height:64px;border-radius:50%;border:2px solid rgba(243,232,214,.4);background:rgba(12,10,9,.4);backdrop-filter:blur(2px);
   color:var(--bone);font:800 12px var(--f-ui);pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center}
 .tb.hot{border-color:var(--brass);background:rgba(217,174,79,.35)}
-.tb.big{width:78px;height:78px;font-size:14px;border-color:rgba(200,50,58,.8);background:rgba(200,50,58,.35)}
-#bAtk{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
-#bJump{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
-#bRun{right:112px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}
-#bAct{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 122px)}
-#bWpn{right:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 196px)}
+.tb.big{width:88px;height:88px;font-size:15px;border-color:rgba(200,50,58,.8);background:rgba(200,50,58,.35)}
+#bAtk{right:calc(env(safe-area-inset-right,0px) + 30px);bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
+#bJump{right:calc(env(safe-area-inset-right,0px) + 142px);bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+#bWpn{right:calc(env(safe-area-inset-right,0px) + 44px);bottom:calc(env(safe-area-inset-bottom,0px) + 140px);width:52px;height:52px;font-size:11px}
+#bAct{right:calc(env(safe-area-inset-right,0px) + 142px);bottom:calc(env(safe-area-inset-bottom,0px) + 104px);width:76px;height:76px;font-size:13px;display:none}
+#bAct.hot{display:flex}
 body.touch #help{display:none}
 @media (max-height:500px){ #obj{padding:6px 10px 8px;width:min(280px,calc(100vw - 32px - 150px))} #obj .txt{font-size:12px} #wanted{margin-top:4px;font-size:14px}
   #mapWrap{width:110px;height:110px} #hp{top:calc(env(safe-area-inset-top,0px) + 130px);width:110px} #weapon{top:calc(env(safe-area-inset-top,0px) + 144px)} #bSnd{top:calc(env(safe-area-inset-top,0px) + 186px)}
-  .tb{width:54px;height:54px} .tb.big{width:68px;height:68px} #joy{width:116px;height:116px} #knob{left:34px;top:34px} }
+  .tb{width:58px;height:58px} .tb.big{width:80px;height:80px} #bWpn{width:48px;height:48px;bottom:calc(env(safe-area-inset-bottom,0px) + 124px)} #bAct{width:68px;height:68px;bottom:calc(env(safe-area-inset-bottom,0px) + 92px)} #joy{width:124px;height:124px} #knob{left:35px;top:35px;width:54px;height:54px} }
 @media (max-width:700px){ #help{display:none} #obj{width:calc(100vw - 32px - 160px)} #obj .txt{font-size:13px} }
 #choice{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6vh);transform:translateX(-50%);z-index:40;width:min(680px,calc(100vw - 32px));text-align:center;background:linear-gradient(180deg,rgba(10,8,8,.55),rgba(10,8,8,.9));border-top:2px solid var(--blood);padding:16px 16px 18px}
 #choice .q{font:500 clamp(16px,2.4vw,22px)/1.4 var(--f-drama);margin-bottom:12px;text-shadow:0 2px 8px #000}
@@ -153,11 +155,11 @@ body.touch #help{display:none}
 </div>
 
 <div id="touch" hidden>
+  <div id="joyZone"></div>
   <div id="joy"><div id="knob"></div></div>
   <div class="tb big" id="bAtk">אגרוף</div>
   <div class="tb" id="bAct">רכב</div>
   <div class="tb" id="bJump">קפוץ</div>
-  <div class="tb" id="bRun">ספרינט</div>
   <div class="tb" id="bWpn">נשק</div>
 </div>
 
