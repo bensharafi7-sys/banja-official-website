@@ -1,8 +1,8 @@
 
 /* ───────── state, player, story cast ───────── */
-const S = { money: 0, bags: 0, mi: 0, si: 0, timer: 0, free: false, wanted: 0, storyPolice: false, noWanted: false };
+const S = { money: 0, bags: 0, mi: 0, si: 0, timer: 0, free: false, wanted: 0, storyPolice: false, noWanted: false, trust: null, demir: null, cp: 'start', spawned: {} };
 let mode = 'title';
-const START = new T.Vector3(-77.5, 0.12, 10);
+const START = new T.Vector3(-88, 0, -303);
 const player = { h: createHuman(REIS), pos: START.clone(), facing: Math.PI / 2, speed: 0, vy: 0, grounded: true, turn: 0, car: null, down: 0,
   hp: 100, dead: false, deadT: 0, weapon: 'fist', hasPistol: false, ammo: 0, reserve: 0, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
   aiming: false, weaponOut: false, hurtT: 9, lock: null };
@@ -12,21 +12,42 @@ attachRealBody(player.h, 'models/reis.glb', { height: 1.78, yaw: Math.PI });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
-function npc(key, name, look, x, z, face) {
+function npc(key, name, look, x, z, face, solid = true) {
   const h = createHuman(look); h.root.position.set(x, groundH(x, z), z); h.root.rotation.y = face; scene.add(h.root);
-  addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
+  if (solid) addCol(x - 0.3, x + 0.3, z - 0.3, z + 0.3, 2);
   NPC[key] = { h, name, pos: h.root.position, face };
 }
-npc('kemal', 'KEMAL', { shirt: 0x6b4a32, under: 0xf0e6d4, pants: 0x3a3028, cap: 0x4a3b32, moustache: 1, hair: 0x9a948c, brows: 0x8a8480, sleeves: 'long', build: 1.08, belly: 1.15, height: 1.72, skin: 0xc48a62 }, -173, 83, Math.PI);
-npc('riza', 'RIZA', { shirt: 0x2c5f8a, pants: 0x2a2a30, hair: 0x1c140f, cap: 0xd9573f, sleeves: 'short', build: 1.15, skin: 0xb07450, sole: 0xdddddd, moustache: 1 }, 184, -305, Math.PI);
-npc('hacer', 'HACER ANA', { shirt: 0x3b2f4a, pants: 0x2a2230, scarf: 0x9b2a2e, skirt: 0.8, skirtC: 0x2a2230, sleeves: 'long', hair: null, build: 1.02, height: 1.6, skin: 0xd09a72, belly: 1.1 }, -200, -303.5, 0);
-npc('tayfun', 'TAYFUN', { shirt: 0x22201e, under: 0xf4f0ea, pants: 0x1c1c22, skirt: 0.6, skirtC: 0x22201e, sleeves: 'long', hair: 0x0d0a08, moustache: 1, build: 1.05, height: 1.86, skin: 0xc08a64, eyes: 0x2a1a0e, brows: 0x0d0a08 }, 105, 13, Math.PI);
-const SPEAKER = { 'REİS': () => player.h, KEMAL: () => NPC.kemal.h, RIZA: () => NPC.riza.h, 'HACER ANA': () => NPC.hacer.h, TAYFUN: () => NPC.tayfun.h };
+npc('selim', 'SELİM', { shirt: 0x5a3a24, under: 0x2a2a2e, pants: 0x24262c, hair: 0x1a120c, sleeves: 'long', build: 0.98, height: 1.76, skin: 0xc89070, brows: 0x1a120c, eyes: 0x3a2412 }, -15, -272.6, Math.PI);
+npc('demir', 'DEMİR', { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, hair: 0x0d0a08, sleeves: 'long', build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a, brows: 0x0d0a08 }, 182, -303, 0, false);
+const SPEAKER = { BENJO: () => player.h, 'SELİM': () => NPC.selim.h, 'DEMİR': () => NPC.demir.h };
 
-const truck = spawnCar('pickup', 0x111216, -75.3, 24, 0);
-spawnCar('merc', 0x0c0c10, -186, 73, Math.PI / 2 * 3);
+const blackCar = spawnCar('merc', 0x0c0c10, -84, -299, Math.PI / 2);
+const CAR_HOME = [-84, -299, Math.PI / 2];
 spawnCar('sahin', 0xf3e3c3, -46, -76.5, Math.PI / 2);
 spawnCar('taxi', 0xf2c014, -5, 75, -Math.PI / 2);
+
+/* the warehouse at the docks: Demir's door faces the city, the ledger waits inside */
+const WH = { x0: 172, x1: 192, z0: -318, z1: -305, door: [180, 184] };
+{
+  const wall = mat(0x4a4640, { r: 0.85 }), roofM = mat(0x2a2c30, { r: 0.6, m: 0.3 }), H = 6;
+  const wb = (x0, x1, z0, z1) => { mesh(BOX, wall, scene, (x0 + x1) / 2, H / 2, (z0 + z1) / 2, x1 - x0, H, z1 - z0); addCol(x0, x1, z0, z1, H); };
+  wb(WH.x0, WH.x0 + 0.4, WH.z0, WH.z1); wb(WH.x1 - 0.4, WH.x1, WH.z0, WH.z1); wb(WH.x0, WH.x1, WH.z0, WH.z0 + 0.4);
+  wb(WH.x0, WH.door[0], WH.z1 - 0.4, WH.z1); wb(WH.door[1], WH.x1, WH.z1 - 0.4, WH.z1);
+  mesh(BOX, wall, scene, (WH.door[0] + WH.door[1]) / 2, H - 0.8, WH.z1 - 0.2, WH.door[1] - WH.door[0], 1.6, 0.4);
+  mesh(BOX, roofM, scene, (WH.x0 + WH.x1) / 2, H + 0.15, (WH.z0 + WH.z1) / 2, WH.x1 - WH.x0 + 0.8, 0.3, WH.z1 - WH.z0 + 0.8);
+  mesh(BOX, mat(0x111111, { e: 0xffb860, ei: 5 }), scene, 182, 4.6, WH.z1 + 0.25, 0.6, 0.25, 0.25, false);
+  mesh(BOX, mat(0x111111, { e: 0xfff0d0, ei: 3 }), scene, 183, H - 0.1, -311.5, 3, 0.1, 0.4, false);
+  for (const [x, z] of [[175, -315], [189, -314], [189, -308.5]]) { mesh(RBOX, mat(0x6b4f32, { r: 0.9 }), scene, x, 0.6, z, 1.2, 1.2, 1.2); addCol(x - 0.6, x + 0.6, z - 0.6, z + 0.6, 1.2); }
+  mesh(BOX, mat(0x5a4632, { r: 0.8 }), scene, 183, 0.45, -311.5, 2, 0.9, 1);
+  addCol(182, 184, -312, -311, 0.9);
+  const doorL = new T.PointLight(0xffb070, 30, 14, 1.6); doorL.position.set(182, 4.2, -301.5); scene.add(doorL);
+  neon('DEPO 7', '#9ad8ff', 182, 5.3, WH.z1 + 0.3, 0, 4);
+}
+const ITEM = {};
+{
+  const env = grp(scene, 20, 0.15, -300); mesh(BOX, mat(0xe8dcc0, { r: 0.7, e: 0x3a3020, ei: 0.4 }), env, 0, 0, 0, 0.32, 0.03, 0.22); env.visible = false; ITEM.envelope = env;
+  const led = grp(scene, 183, 0.98, -311.5); mesh(BOX, mat(0x3a1a12, { r: 0.6, e: 0x4a2a10, ei: 0.5 }), led, 0, 0, 0, 0.3, 0.06, 0.4); mesh(BOX, mat(0xd9ae4f, { m: 1, r: 0.3 }), led, 0, 0.032, 0, 0.31, 0.005, 0.06); ITEM.ledger = led;
+}
 const TRAFFIC = LOW ? 9 : 16;
 for (let i = 0; i < TRAFFIC; i++) {
   const kind = pick(['taxi', 'taxi', 'sahin', 'sahin', 'merc', 'pickup']);
@@ -86,7 +107,7 @@ function respawn(where, why) {
   S.wanted = 0; clearCops();
   for (const a of [...actors]) if (a.faction === 'police') removeActor(a);
   toast(why, lost ? `₺${lost} פחות בכיס` : 'חזרת לרחוב', 2400);
-  const st = curStep(); if (st && (st.fight || st.police || st.time)) failStep('', true);
+  if (!S.free && curStep()) { mode = 'play'; loadCheckpoint(S.cp); }
 }
 function busted() {
   if (player.dead) return;
@@ -110,6 +131,7 @@ let jumpReq = false, sprintTouch = false, walkToggle = false, camIdle = 0, rmb =
 addEventListener('keydown', e => {
   keys[e.code] = true; if (e.repeat) return;
   if (mode === 'cut' && ['Enter', 'Space', 'KeyF', 'KeyE'].includes(e.code)) { advanceDialog(true); e.preventDefault(); return; }
+  if (mode === 'choice' && choiceCb) { if (e.code === 'Digit1') choiceCb('a'); if (e.code === 'Digit2') choiceCb('b'); return; }
   if (mode !== 'play' || player.dead) return;
   if (e.code === 'KeyF' || e.code === 'KeyE') interact();
   if (e.code === 'Space') { jumpReq = true; e.preventDefault(); }
@@ -319,160 +341,220 @@ function knockCheck() {
   }
 }
 
-/* ───────── story ───────── */
+/* ───────── story: Görev 01 · Karaköy'den Gelen Telefon ───────── */
+const CP_KEY = 'benjo.m01';
 const STORY = [
-  { ep: 'Bölüm 1 · Çay ve Tehdit', steps: [
-    { text: 'לך לגן התה של כמאל. הסמן הזהוב במפה.', target: [-175, 79], r: 3.5, npc: 'kemal', reward: 500, dlg: [
-      ['KEMAL', 'Hoş geldin, Reis. שלושה ימים חיכינו לך.', 'k1'],
-      ['REİS', 'דבר, כמאל. מי מדבר בשכונה שלי?', 'r1'],
-      ['KEMAL', 'תייפון. הוא אומר לכולם שאתה כבר לא בעניינים... ובנמל מחכה משלוח על השם שלך.', 'k2'],
-      ['REİS', 'Tamam. אף אחד לא נוגע במה ששלי.', 'r2'],
-      ['KEMAL', 'קח את הטנדר השחור. ומהר... Allah korusun.', 'k3'],
+  { ep: "Görev 01 · Karaköy'den Gelen Telefon", steps: [
+    { id: 'call1', text: 'הטלפון מצלצל…', cp: 'start', phone: [
+      ['ELİF', "בנג'ו, אל תדבר בטלפון. יש עיניים בכל פינה. הרכב השחור ליד הרציף.", 'm_e1'],
+      ['BENJO', 'אם רצו שאשאר בחוץ... היו צריכים לסגור את העיר.', 'm_b1'],
+      ['ELİF', 'הלילה... אתה לא יודע מי חבר שלך.', 'm_e2'],
     ] },
-  ] },
-  { ep: 'Bölüm 2 · Siyah Kamyonet', steps: [
-    { text: 'היכנס לטנדר השחור שלך', enter: true },
-    { text: 'סע לנמל לפני שהמשלוח נעלם', target: [178, -299], r: 10, time: 130, vehicle: true, arrive: 'docks' },
-    { text: 'אנשי תייפון בנמל! תוריד אותם באגרופים', fight: 'docks' },
-    { text: 'דבר עם רזא', target: [183, -303], r: 3.2, npc: 'riza', reward: 1000, gift: 'pistol', dlg: [
-      ['RIZA', 'וואלה, Reis... עוד יש לך את זה.', 'z2'],
-      ['REİS', 'המשלוח?', 'r3'],
-      ['RIZA', 'בפנים. אבל מישהו הלשין, המשטרה כבר בדרך. קח את זה... אתה תצטרך.', 'z3'],
-      ['REİS', 'תסגור את השער, רזא. אני לוקח את זה ליאלי של האנה.', 'r4'],
+    { id: 'walk', text: 'לך לאורך הרציף בגשם. הסמן הזהוב במפה.', target: [-40, -296], r: 3.5, tip: true },
+    { id: 'call2', text: 'אליף שוב על הקו', phone: [
+      ['ELİF', 'סלים מחכה לך ליד המוסך. הוא אומר שיש לו מידע על המחסן... אבל אני לא סומכת עליו.', 'm_e3'],
+      ['ELİF', "תחליט, בנג'ו. לסמוך עליו... או לבדוק לבד קודם.", 'm_e4'],
+    ], choice: { q: 'אליף לא סומכת על סלים. מה תעשה?', a: 'לסמוך על סלים', b: 'לבדוק לבד קודם', key: 'trust', va: 'selim', vb: 'alone' } },
+    { id: 'selim', if: () => S.trust === 'selim', text: 'פגוש את סלים ליד המוסך', target: [-15, -274.5], r: 3, npc: 'selim', dlg: [
+      ['SELİM', "בנג'ו... חשבתי שלא אראה אותך יותר. השומר במחסן נקרא דמיר. תגיד לו שמוראט שלח אותך.", 'm_s1'],
+      ['BENJO', 'אם אתה משקר לי, סלים... אני אדע.', 'm_b2'],
     ] },
-  ] },
-  { ep: 'Bölüm 3 · Takip', steps: [
-    { text: 'סע ליאלי שעל החוף. נער את המשטרה מהזנב.', target: [-200, -298], r: 8, vehicle: true, police: true, npc: 'hacer', reward: 2000, dlg: [
-      ['HACER ANA', 'בני... ידעתי שתבוא.', 'h1'],
-      ['REİS', 'תשמרי על זה, Ana. הלילה אני מסיים את זה עם תייפון.', 'r5'],
-      ['HACER ANA', 'דם לא נשטף בדם, oğlum. תזכור מאיפה באת.', 'h2'],
-      ['REİS', 'אני זוכר. בגלל זה אני הולך.', 'r6'],
+    { id: 'clue', if: () => S.trust === 'alone', text: 'מישהו השאיר מעטפה ליד הלוקנטה. מצא אותה.', target: [20, -300], r: 2.2, item: 'envelope', mono: [
+      ['BENJO', 'דמיר... מוראט... אז ככה זה עובד עכשיו.', 'm_b3'],
     ] },
-  ] },
-  { ep: 'Bölüm 4 · İhanet', steps: [
-    { text: 'מגדל גלאטה. תייפון מחכה. אל תאחר.', target: [105, 2], r: 9, time: 120, arrive: 'tower' },
-    { text: 'אנשי תייפון חמושים! מצא מחסה וחסל את כולם', fight: 'tower' },
-    { text: 'גש לתייפון', target: [105, 10.5], r: 3, npc: 'tayfun', reward: 5000, end: true, dlg: [
-      ['TAYFUN', 'חיכיתי לך, Reis. הנמל, השכונה... הכל כבר שלי.', 't1'],
-      ['REİS', 'טעית בדבר אחד, תייפון.', 'r7'],
-      ['TAYFUN', 'באמת? באיזה?', 't2'],
-      ['REİS', 'במשפחה הזאת... אין בגידה בלי מחיר.', 'r8'],
-      ['TAYFUN', 'אז בוא נראה... מי יישאר עומד בסוף.', 't3'],
+    { id: 'car', text: 'היכנס לרכב השחור ליד הרציף', cp: 'car', enter: true },
+    { id: 'drive', text: 'סע למחסן 7 בנמל. עקוב אחרי ה-GPS.', target: [160, -300], r: 9, vehicle: true, gps: true },
+    { id: 'demir', text: 'גש לשומר בדלת המחסן', cp: 'wh', target: [182, -301], r: 3, npc: 'demir', dlg: [
+      ['DEMİR', 'המחסן סגור. תסתובב... וחזור מאיפה שבאת.', 'm_d1'],
+    ], choice: { q: 'דמיר חוסם את הדלת.', a: '"מוראט שלח אותי"', b: 'להיכנס בכוח', key: 'demir', va: 'talk', vb: 'fight' } },
+    { id: 'talk', if: () => S.demir === 'talk', text: '', auto: true, npc: 'demir', dlg: [
+      ['BENJO', 'מוראט שלח אותי.', 'm_b4'],
+      ['DEMİR', '...תיכנס. מהר.', 'm_d2'],
+    ] },
+    { id: 'fight', if: () => S.demir === 'fight', text: 'דמיר ואנשיו! תוריד אותם', fight: 'wh', pre: [
+      ['BENJO', 'אני לא חוזר אחורה.', 'm_b5'],
+      ['DEMİR', 'טעות גדולה, חבר.', 'm_d3'],
+    ] },
+    { id: 'ledger', text: 'קח את הפנקס מהשולחן במחסן', cp: 'ledger', target: [183, -310.2], r: 1.6, item: 'ledger' },
+    { id: 'escape', text: 'אנשי מוראט בדרך! ברח מהנמל', escape: [182, -305, 80] },
+    { id: 'call3', text: 'אליף מתקשרת', end: true, phone: [
+      ['ELİF', 'מצאת את זה? יופי. עכשיו תיעלם משם... מוראט כבר יודע שחזרת.', 'm_e5'],
+      ['BENJO', 'שיידע. הלילה הזה רק התחיל.', 'm_b6'],
     ] },
   ] },
 ];
 const curStep = () => (STORY[S.mi] || {}).steps?.[S.si];
+const stepIdx = id => STORY[0].steps.findIndex(s => s.id === id);
+
+/* checkpoints: where the player (and the black car) wake up, and what has already happened */
+const CPS = {
+  start: { p: [-88, -303, Math.PI / 2], car: CAR_HOME },
+  car: { p: [-88, -301.5, Math.PI / 2], car: CAR_HOME },
+  wh: { p: [168, -300.5, Math.PI / 2], car: [160, -300, Math.PI / 2] },
+  ledger: { p: [182, -306.5, Math.PI], car: [160, -300, Math.PI / 2] },
+};
+function saveCheckpoint(name) {
+  S.cp = name;
+  try { localStorage.setItem(CP_KEY, JSON.stringify({ cp: name, trust: S.trust, demir: S.demir, money: S.money })); } catch (e) {}
+}
+function readCheckpoint() { try { return JSON.parse(localStorage.getItem(CP_KEY) || 'null'); } catch (e) { return null; } }
+function clearCheckpoint() { try { localStorage.removeItem(CP_KEY); } catch (e) {} }
+function placeAtCheckpoint(name) {
+  const c = CPS[name] || CPS.start;
+  if (player.car) toggleCar(true);
+  player.pos.set(c.p[0], 0, c.p[1]); player.pos.y = groundH(c.p[0], c.p[1]); player.facing = c.p[2]; cam.yaw = c.p[2];
+  player.speed = 0; player.vy = 0;
+  blackCar.pos.set(c.car[0], 0, c.car[1]); blackCar.heading = c.car[2]; blackCar.speed = 0; blackCar.vel.set(0, 0, 0); blackCar.ai = null;
+  for (const a of [...actors]) if (a.tag === 'wh' || a.tag === 'esc') removeActor(a);
+  S.spawned = {};
+  NPC.demir.h.root.visible = S.demir !== 'fight' || name === 'wh';
+  if (name === 'wh') { S.demir = null; NPC.demir.pos.set(182, 0, -303); NPC.demir.h.root.rotation.y = 0; }
+  if (name === 'ledger' && S.demir === 'talk') { NPC.demir.pos.set(178.5, 0, -302.5); NPC.demir.h.root.rotation.y = Math.PI / 2; }
+  ITEM.ledger.visible = true;
+}
+function loadCheckpoint(name) {
+  placeAtCheckpoint(name);
+  S.si = stepIdx({ start: 'call1', car: 'car', wh: 'demir', ledger: 'ledger' }[name] || 'call1');
+  startStep();
+}
+
 function startStep() {
   const st = curStep();
   if (!st) return;
+  if (st.if && !st.if()) { S.si++; startStep(); return; }
   $('ep').textContent = STORY[S.mi].ep;
   $('objTxt').textContent = st.text;
-  S.timer = st.time || 0; $('timer').hidden = !st.time;
-  if (st.police && !S.storyPolice) {
-    S.storyPolice = true; S.wanted = 2;
-    const pp = playerPos();
-    for (let i = 0; i < 2; i++) { const c = spawnCar('police', 0xf6f6f6, 0, 0, 0); const [a, b, d] = aiRandomSegmentNear(pp.x, pp.z, 50, 110); aiPlace(c, a, b, d, 0.3 + i * 0.3); c.ai = null; c.speed = 0; c.vel.set(0, 0, 0); c.police = true; c.unloaded = true; copCars.push(c); }
-    setTimeout(() => say('pol'), 1200);
-  }
-  if (S.si === 0) toast(STORY[S.mi].ep.split(' · ')[1], STORY[S.mi].ep.split(' · ')[0], 2600);
+  $('timer').hidden = true;
+  if (st.cp) saveCheckpoint(st.cp);
+  if (st.item) ITEM[st.item].visible = true;
+  if (st.id === 'call1') toast("Karaköy'den Gelen Telefon", 'Görev 01', 2600);
+  if (st.phone) { sfx('ring'); setTimeout(() => { if (curStep() === st) startDialog(st.phone, null, () => afterTalk(st), { phone: true }); }, 1400); }
+  if (st.auto) startDialog(st.dlg, NPC[st.npc], () => afterTalk(st));
+  if (st.fight) startDialog(st.pre, NPC.demir, () => spawnFight(st.fight));
+  if (st.escape) spawnFight('esc');
+  if (st.tip) toast('', TOUCH ? "ג'ויסטיק לתנועה · גרירה למצלמה · ספרינט לריצה" : 'WASD תנועה · Shift ריצה · עכבר מצלמה', 3600);
 }
+function afterTalk(st) {
+  if (st.choice) { showChoice(st.choice, () => completeStep(true)); return; }
+  completeStep(true);
+}
+let choiceCb = null;
+function showChoice(c, done) {
+  mode = 'choice'; document.exitPointerLock?.();
+  $('choiceQ').textContent = c.q; $('choiceA').textContent = c.a; $('choiceB').textContent = c.b; $('choice').hidden = false;
+  choiceCb = v => { $('choice').hidden = true; choiceCb = null; S[c.key] = v === 'a' ? c.va : c.vb; mode = 'play'; done(); };
+  setTimeout(() => $('choiceA').focus(), 50);
+}
+$('choiceA').addEventListener('click', () => choiceCb?.('a'));
+$('choiceB').addEventListener('click', () => choiceCb?.('b'));
 function spawnFight(kind) {
-  if (kind === 'docks') {
-    for (const [x, z] of [[170, -305], [190, -300], [182, -312], [168, -297]]) makeActor('gang', x, z, 'fist', { tag: 'docks', alert: true, hp: 70, reward: 80 });
-    say('z1', NPC.riza.h, NPC.riza.pos);
+  S.spawned = S.spawned || {}; S.spawned[kind] = true;
+  if (kind === 'wh') {
+    NPC.demir.h.root.visible = false;
+    makeActor('gang', NPC.demir.pos.x, NPC.demir.pos.z, 'fist', { tag: 'wh', alert: true, hp: 140, reward: 300, facing: 0,
+      look: { shirt: 0x1e2024, under: 0x3a3a40, pants: 0x1a1a1e, cap: 0x141416, moustache: 1, build: 1.22, belly: 1.08, height: 1.9, skin: 0xb8805a } });
+    for (const [x, z] of [[176, -309], [188, -309]]) makeActor('gang', x, z, 'fist', { tag: 'wh', alert: true, hp: 80, reward: 100 });
+    combatK = 1;
   }
-  if (kind === 'tower') {
-    for (const [x, z, w] of [[96, -8, 'pistol'], [114, -8, 'pistol'], [90, -2, 'pistol'], [120, 0, 'pistol'], [105, -14, 'fist'], [100, -20, 'pistol']]) makeActor('gang', x, z, w, { tag: 'tower', alert: true, reward: 150 });
-    setTimeout(() => say('t0', NPC.tayfun.h, NPC.tayfun.pos, { vol: 1.4 }), 300);
+  if (kind === 'esc') {
+    for (const [x, z, w] of [[214, -301, 'fist'], [208, -298, 'fist'], [150, -302, 'fist'], [146, -299, 'pistol']]) makeActor('gang', x, z, w, { tag: 'esc', alert: true, hp: 75, reward: 120 });
+    combatK = 1;
   }
 }
 const fightLeft = tag => actors.filter(a => a.tag === tag && !a.dead).length;
-function completeStep() {
+function completeStep(talked) {
   const st = curStep();
   const go = () => {
     if (st.reward) S.money += st.reward;
-    if (st.police) { clearCops(); S.wanted = 0; }
-    if (st.gift === 'pistol') {
-      player.hasPistol = true; player.ammo = 12; player.reserve = 72; player.weapon = 'pistol'; player.h.gun.g.visible = true;
-      setTimeout(() => toast('קיבלת אקדח', TOUCH ? 'כפתור "נשק" להחלפה · "ירי" נועל על המטרה הקרובה' : 'Q להחלפה · לחצן ימני לכוונון · R לטעינה', 3600), 2800);
-    }
-    sfx('win');
+    if (st.item) { ITEM[st.item].visible = false; sfx('coin'); }
+    if (st.id === 'talk') { NPC.demir.pos.set(178.5, 0, -302.5); NPC.demir.h.root.rotation.y = Math.PI / 2; }
+    if (st.escape) for (const a of [...actors]) if (a.tag === 'esc') removeActor(a);
     S.si++;
-    if (S.si >= STORY[S.mi].steps.length) {
-      toast('GÖREV TAMAMLANDI', 'המשימה הושלמה' + (st.reward ? `  ·  ₺${st.reward.toLocaleString('en-US')}+` : ''), 2600);
-      if (st.end) { setTimeout(() => { mode = 'end'; $('endCard').hidden = false; document.exitPointerLock?.(); }, 900); return; }
-      S.mi++; S.si = 0; setTimeout(startStep, 2700);
-    } else startStep();
-  };
-  if (st.dlg) startDialog(st.dlg, NPC[st.npc], go); else go();
-}
-function failStep(why, silent) {
-  const st = curStep();
-  if (!silent) { sfx('fail'); toast('GÖREV BAŞARISIZ', why, 2600); }
-  if (st.police) { clearCops(); S.wanted = 0; }
-  if (st.fight) { for (const a of [...actors]) if (a.tag === st.fight) removeActor(a); S.si--; }
-  setTimeout(() => {
-    if (!silent && (st.police || st.vehicle)) {
-      const c = player.car || truck;
-      if (!player.car) { player.pos.set(S.mi === 2 ? 176 : -73, 0, S.mi === 2 ? -300 : 21); toggleCar(); }
-      c.pos.set(S.mi === 2 ? 170 : -75.3, 0, S.mi === 2 ? -300 : 24); c.heading = S.mi === 2 ? -Math.PI / 2 : 0; c.speed = 0; c.vel.set(0, 0, 0);
-    }
+    if (S.si >= STORY[S.mi].steps.length) { finishMission(); return; }
+    if (!st.phone && !st.auto) sfx('win');
     startStep();
-  }, silent ? 50 : 1500);
+  };
+  if (talked) { go(); return; }
+  if (st.dlg) startDialog(st.dlg, NPC[st.npc], st.choice ? () => afterTalk(st) : go);
+  else if (st.mono) startDialog(st.mono, null, go);
+  else go();
+}
+function finishMission() {
+  S.money += 1500; sfx('win');
+  toast('GÖREV TAMAMLANDI', "השיחה מקרקוי  ·  ₺1,500+", 2600);
+  clearCheckpoint();
+  $('endTxt').textContent = S.trust === 'selim'
+    ? 'הפנקס אצלך. סמכת על סלים, והפעם זה עבד. אבל מוראט כבר יודע שחזרת, ובאיסטנבול נאמנות עולה ביוקר.'
+    : 'הפנקס אצלך. לא סמכת על אף אחד, ככה שורדים באיסטנבול. אבל מוראט כבר יודע שחזרת.';
+  setTimeout(() => { mode = 'end'; $('endCard').hidden = false; document.exitPointerLock?.(); }, 2200);
 }
 function missionUpdate(dt) {
   const st = curStep();
-  if (!st || mode !== 'play' || player.dead) { beacon.visible = false; return; }
+  if (!st || mode !== 'play' || player.dead || S.free) { beacon.visible = false; return; }
+  if (st.phone || st.auto) { beacon.visible = false; return; }
   if (st.enter) {
-    beacon.visible = !player.car; beacon.position.set(truck.pos.x, 0, truck.pos.z);
-    if (player.car === truck) completeStep();
+    beacon.visible = !player.car; beacon.position.set(blackCar.pos.x, 0, blackCar.pos.z);
+    if (player.car === blackCar) completeStep();
+    else if (player.car) setPrompt('זה לא הרכב. הרכב השחור ליד הרציף.');
     return;
   }
   if (st.fight) {
     beacon.visible = false;
+    if (dlg) return;
     const left = fightLeft(st.fight);
     $('objTxt').textContent = `${st.text} (${left} נותרו)`;
-    if (left === 0 && !S.fightEnding) { S.fightEnding = true; setTimeout(() => { S.fightEnding = false; if (curStep() === st) completeStep(); }, 1200); }
+    if (left === 0 && S.spawned?.[st.fight] && !S.fightEnding) { S.fightEnding = true; setTimeout(() => { S.fightEnding = false; if (curStep() === st) completeStep(); }, 1200); }
     return;
   }
-  beacon.visible = true; beacon.position.set(st.target[0], groundH(st.target[0], st.target[1]), st.target[1]);
+  const pp = playerPos();
+  if (st.escape) {
+    const [ex, ez, er] = st.escape, d = Math.hypot(pp.x - ex, pp.z - ez);
+    beacon.visible = false;
+    $('objTxt').textContent = `${st.text} (${Math.max(0, Math.ceil(er - d))} מ׳)`;
+    if (d > er) completeStep();
+    return;
+  }
+  const tx = st.target[0], tz = st.target[1];
+  beacon.visible = true; beacon.position.set(tx, groundH(tx, tz), tz);
   beaconRing.scale.setScalar(st.r / 3 * (1 + Math.sin(performance.now() / 300) * 0.06));
-  if (st.time) {
-    S.timer -= dt; const t = Math.max(0, S.timer);
-    $('timer').textContent = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-    $('timer').classList.toggle('ok', t > 20);
-    if (S.timer <= 0) { failStep('נגמר הזמן'); S.timer = 999; return; }
-  }
-  const pp = playerPos(), d = Math.hypot(pp.x - st.target[0], pp.z - st.target[1]);
-  if (st.police) {
-    const near = copCars.some(c => Math.hypot(c.pos.x - pp.x, c.pos.z - pp.z) < 18);
-    if (near && player.car && Math.abs(player.car.speed) < 2) { S.bust = (S.bust || 0) + dt; if (S.bust > 3) { S.bust = 0; failStep('נתפסת. המשטרה החרימה את המשלוח.'); return; } } else S.bust = 0;
-  }
+  if (st.item) { const it = ITEM[st.item]; it.rotation.y += dt * 1.5; }
+  const d = Math.hypot(pp.x - tx, pp.z - tz);
   if (d < st.r) {
     if (st.vehicle && !player.car) { setPrompt('צריך להגיע עם רכב'); return; }
-    if (st.police && copCars.some(c => Math.hypot(c.pos.x - pp.x, c.pos.z - pp.z) < 70)) { setPrompt('השוטרים קרובים מדי. תתרחק מהם קודם.'); return; }
-    if (st.arrive) {
-      if (player.car && Math.abs(player.car.speed) > 8) { setPrompt('עצור את הרכב'); return; }
-      spawnFight(st.arrive); S.si++; startStep(); combatK = 1; return;
-    }
-    if (player.car) { if (Math.abs(player.car.speed) > 4) { setPrompt('עצור את הרכב'); return; } toggleCar(); }
+    if (player.car) { if (Math.abs(player.car.speed) > 4) { setPrompt('עצור את הרכב'); return; } if (!st.vehicle) toggleCar(); }
     completeStep();
   }
 }
 
-/* ───────── dialogue: voiced, lip-synced, over-the-shoulder shots ───────── */
+/* GPS: an L-shaped route over the street grid, recomputed twice a second */
+let gps = [], gpsT = 0;
+function updateGPS(dt) {
+  const st = curStep();
+  if (!st || !st.gps || mode !== 'play') { gps = []; return; }
+  if ((gpsT -= dt) > 0) return; gpsT = 0.5;
+  const pp = playerPos(), [tx, tz] = st.target;
+  const snap = v => roadAt(clamp(Math.round((v - ORG) / BLK), 0, NB));
+  const ax = snap(pp.x), az = snap(pp.z), bx = snap(tx), bz = snap(tz);
+  if (Math.hypot(tx - pp.x, tz - pp.z) < 60 || (Math.abs(pp.z - tz) < 14 && pp.z < -286)) { gps = [[pp.x, pp.z], [tx, tz]]; return; }
+  gps = [[pp.x, pp.z], [ax, az], [bx, az], [bx, bz], [tx, tz]];
+}
+
+/* ───────── dialogue: voiced, lip-synced, over-the-shoulder shots (or a close-up on a phone call) ───────── */
 let dlg = null;
-function startDialog(lines, who, done) {
-  if (player.car) toggleCar(true);
+function startDialog(lines, who, done, opts = {}) {
+  if (player.car && who) toggleCar(true);
+  if (player.car) { player.car.speed = 0; player.car.vel.set(0, 0, 0); }
   mode = 'cut'; document.body.classList.add('cine'); document.exitPointerLock?.();
-  player.aiming = false; player.h.guardK = 0;
+  player.aiming = false; player.h.guardK = 0; player.speed = 0;
   const n = who;
-  let ox = player.pos.x - n.pos.x, oz = player.pos.z - n.pos.z; const ol = Math.hypot(ox, oz) || 1;
-  player.pos.set(n.pos.x + ox / ol * 1.9, 0, n.pos.z + oz / ol * 1.9); collide(player.pos, 0.35);
-  player.pos.y = groundH(player.pos.x, player.pos.z); player.speed = 0;
-  player.facing = Math.atan2(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
-  n.h.root.rotation.y = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
-  dlg = { lines, i: -1, who: n, done, t: 0, cut: true, at: performance.now(), auto: 0 };
+  if (n) {
+    let ox = player.pos.x - n.pos.x, oz = player.pos.z - n.pos.z; const ol = Math.hypot(ox, oz) || 1;
+    player.pos.set(n.pos.x + ox / ol * 1.9, 0, n.pos.z + oz / ol * 1.9); collide(player.pos, 0.35);
+    player.pos.y = groundH(player.pos.x, player.pos.z);
+    player.facing = Math.atan2(n.pos.x - player.pos.x, n.pos.z - player.pos.z);
+    n.h.root.rotation.y = Math.atan2(player.pos.x - n.pos.x, player.pos.z - n.pos.z);
+  }
+  dlg = { lines, i: -1, who: n, done, t: 0, cut: true, at: performance.now(), auto: 0, phone: !!opts.phone };
   setTimeout(() => advanceDialog(false), 700);
 }
 function advanceDialog(user) {
@@ -485,9 +567,9 @@ function advanceDialog(user) {
     const d = dlg.done; dlg = null; mode = 'play'; d && d(); return;
   }
   const [w, l, vid] = dlg.lines[dlg.i];
-  $('who').textContent = w; $('line').textContent = l; $('dlg').hidden = false;
-  $('dlgFace').hidden = w !== 'REİS';
-  const dur = say(vid, SPEAKER[w]?.());
+  $('who').textContent = w + (w === 'ELİF' ? '  ·  📞' : ''); $('line').textContent = l; $('dlg').hidden = false;
+  $('dlgFace').hidden = w !== 'BENJO';
+  const dur = say(vid, SPEAKER[w]?.(), null, { phone: w === 'ELİF' });
   dlg.auto = (dur || Math.max(2.5, l.length * 0.075)) + 0.6;
 }
 function cutCamera(dt) {
@@ -495,18 +577,34 @@ function cutCamera(dt) {
   dlg.t += dt;
   if (dlg.i >= 0 && dlg.t > dlg.auto) advanceDialog(false);
   if (!dlg) return;
-  const speakerIsReis = dlg.i < 0 || dlg.lines[dlg.i][0] === 'REİS';
-  const S1 = speakerIsReis ? player.pos : dlg.who.pos, L1 = speakerIsReis ? dlg.who.pos : player.pos;
-  let dx = S1.x - L1.x, dz = S1.z - L1.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
-  const rx = -dz, rz = dx, drift = dlg.t * 0.035;
-  const want = new T.Vector3(L1.x - dx * 1.5 + rx * (0.85 + drift), L1.y + 1.78, L1.z - dz * 1.5 + rz * (0.85 + drift));
-  const lookAt = new T.Vector3(S1.x, S1.y + 1.62, S1.z);
+  let want, lookAt;
+  const P = playerPos();
+  if (!dlg.who && player.car) {
+    const c = player.car, hw = player.h.root.getWorldPosition(new T.Vector3());
+    let ox = hw.x - c.pos.x, oz = hw.z - c.pos.z; const ol = Math.hypot(ox, oz);
+    if (ol < 0.1) { ox = Math.cos(c.heading); oz = -Math.sin(c.heading); } else { ox /= ol; oz /= ol; }
+    const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
+    want = new T.Vector3(hw.x + ox * 2.3 + fx * 0.9, hw.y + 1.25, hw.z + oz * 2.3 + fz * 0.9);
+    lookAt = new T.Vector3(hw.x, hw.y + 1.05, hw.z);
+  } else if (!dlg.who) {
+    // close-up: slightly off-axis in front of Benjo, slow push-in, rain between us and him
+    const f = player.car ? player.car.heading : player.facing, fx = Math.sin(f), fz = Math.cos(f), rx = -fz, rz = fx, push = Math.min(dlg.t, 6) * 0.04;
+    const side = dlg.i % 2 ? -1 : 1, base = player.car ? 1.25 : 1.62;
+    want = new T.Vector3(P.x + fx * (2.1 - push) + rx * 0.6 * side, P.y + base + 0.12, P.z + fz * (2.1 - push) + rz * 0.6 * side);
+    lookAt = new T.Vector3(P.x, P.y + base - 0.06, P.z);
+  } else {
+    const speakerIsBenjo = dlg.i < 0 || dlg.lines[dlg.i][0] === 'BENJO';
+    const S1 = speakerIsBenjo ? player.pos : dlg.who.pos, L1 = speakerIsBenjo ? dlg.who.pos : player.pos;
+    let dx = S1.x - L1.x, dz = S1.z - L1.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
+    const rx = -dz, rz = dx, drift = dlg.t * 0.035;
+    want = new T.Vector3(L1.x - dx * 1.5 + rx * (0.85 + drift), L1.y + 1.78, L1.z - dz * 1.5 + rz * (0.85 + drift));
+    lookAt = new T.Vector3(S1.x, S1.y + 1.62, S1.z);
+  }
   if (dlg.cut) { cam.pos.copy(want); cam.look.copy(lookAt); dlg.cut = false; }
   cam.pos.lerp(want, damp(4, dt)); cam.look.lerp(lookAt, damp(5, dt));
   camera.position.copy(cam.pos); camera.lookAt(cam.look);
   if (Math.abs(camera.fov - 40) > 0.1) { camera.fov = 40; camera.updateProjectionMatrix(); }
 }
-
 /* ───────── Tayfun's turf (free roam): crews hang out, defend their corner ───────── */
 const turf = GANG_BLOCKS.map(([i, j]) => ({ cx: ORG + BLK / 2 + i * BLK, cz: ORG + BLK / 2 + j * BLK, cool: 0, spawned: false, tag: 'turf' + i + j }));
 function updateTurf(dt) {
@@ -514,7 +612,7 @@ function updateTurf(dt) {
   for (const t of turf) {
     t.cool -= dt;
     const d = Math.hypot(t.cx - pp.x, t.cz - pp.z);
-    if (!t.spawned && t.cool <= 0 && d < 110 && d > 45 && S.mi >= 1) {
+    if (!t.spawned && t.cool <= 0 && d < 110 && d > 45 && S.free) {
       t.spawned = true;
       const cx = t.cx + 27.5, cz = t.cz - 27.5;
       makeActor('gang', cx, cz, 'fist', { tag: t.tag, facing: 0 }); makeActor('gang', cx - 1.4, cz + 0.9, 'fist', { tag: t.tag, facing: 2 });
@@ -522,7 +620,7 @@ function updateTurf(dt) {
     }
     if (t.spawned) {
       const left = actors.filter(a => a.tag === t.tag && !a.dead);
-      if (!left.length) { t.spawned = false; t.cool = 150; if (d < 60) toast('', 'השטח של תייפון נוקה', 1600); }
+      if (!left.length) { t.spawned = false; t.cool = 150; if (d < 60) toast('', 'השטח של מוראט נוקה', 1600); }
       else if (d > 170 && !left.some(a => a.alert)) { for (const a of [...actors]) if (a.tag === t.tag) removeActor(a); t.spawned = false; }
     }
   }
@@ -555,8 +653,12 @@ function drawMinimap() {
   for (const a of actors) if (!a.dead) dot(a.pos.x, a.pos.z, a.faction === 'police' ? '#5b8cff' : (a.alert ? '#ff3b3b' : '#c06060'), 4);
   for (const c of copCars) dot(c.pos.x, c.pos.z, Math.floor(performance.now() / 200) % 2 ? '#ff3030' : '#3060ff', 5);
   const st = curStep();
-  if (st && mode === 'play' && !st.fight) {
-    let tx = st.enter ? truck.pos.x : st.target[0], tz = st.enter ? truck.pos.z : st.target[1];
+  if (gps.length > 1) {
+    mm.strokeStyle = 'rgba(0,0,0,.6)'; mm.lineWidth = 9 / sc; mm.lineJoin = 'round';
+    for (const pass of [0, 1]) { mm.beginPath(); for (let i = 0; i < gps.length; i++) mm[i ? 'lineTo' : 'moveTo'](gps[i][0] - pp.x, gps[i][1] - pp.z); mm.stroke(); mm.strokeStyle = '#ffc456'; mm.lineWidth = 5 / sc; }
+  }
+  if (st && mode === 'play' && !S.free && (st.target || st.enter)) {
+    let tx = st.enter ? blackCar.pos.x : st.target[0], tz = st.enter ? blackCar.pos.z : st.target[1];
     let dx = tx - pp.x, dz = tz - pp.z; const d = Math.hypot(dx, dz), lim = (W / 2 - 10) / sc;
     if (d > lim) { dx *= lim / d; dz *= lim / d; }
     mm.fillStyle = '#ffc456'; mm.strokeStyle = '#000'; mm.lineWidth = 2 / sc; mm.beginPath(); mm.arc(dx, dz, 7 / sc, 0, TAU); mm.fill(); mm.stroke();
@@ -695,13 +797,20 @@ function titleCamera(dt) {
 }
 
 /* ───────── frame ───────── */
+const flagPos = window.__flag?.geometry.attributes.position, flagX = flagPos && Float32Array.from({ length: flagPos.count }, (_, i) => flagPos.getX(i));
+function waveFlag(t) {
+  if (!flagPos) return;
+  for (let i = 0; i < flagPos.count; i++) { const x = flagX[i], k = (x + 1.5) / 3; flagPos.setZ(i, Math.sin(t * 5 - x * 2.4) * 0.22 * k + Math.sin(t * 9.3 - x * 4) * 0.05 * k); }
+  flagPos.needsUpdate = true;
+}
 const tmpProj = new T.Vector3();
 function update(dt) {
   worldT += dt; updateLights(worldT);
   setPrompt(null);
   listener.copy(camera.position);
   if (mode === 'play') { if (player.car) updateDrive(dt); else updateFoot(dt); }
-  else if (!player.car) { animateHuman(player.h, dt, 0, {}); player.h.root.rotation.y = player.facing; player.h.root.position.copy(player.pos); }
+  else if (!player.car) { animateHuman(player.h, dt, 0, { phone: !!(dlg && dlg.phone) }); player.h.root.rotation.y = player.facing; player.h.root.position.copy(player.pos); }
+  else animateHuman(player.h, dt, 0, { seated: true, phone: !!(dlg && dlg.phone) });
   syncRealBody(player.h, dt, player.car ? 0 : (mode === 'play' ? player.speed : 0), { seated: !!player.car, car: !!player.car });
   const pp = playerPos();
   const obstacles = cars.map(c => c.pos);
@@ -724,9 +833,10 @@ function update(dt) {
   }
   for (const k in NPC) {
     const n = NPC[k];
-    if (Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z) < 90) animateHuman(n.h, dt, 0, dlg && dlg.who === n ? { lookAt: 0, eyeYaw: 0 } : { angry: k === 'tayfun' });
+    if (Math.hypot(n.pos.x - player.pos.x, n.pos.z - player.pos.z) < 90) animateHuman(n.h, dt, 0, dlg && dlg.who === n ? { lookAt: 0, eyeYaw: 0 } : { angry: k === 'demir' && S.demir !== 'talk' });
   }
-  updateLipSync(); updateFX(dt); updateWanted(dt); updateTurf(dt);
+  updateLipSync(); updateFX(dt); updateWanted(dt); updateTurf(dt); updateGPS(dt);
+  updateRain(dt, camera.position); waveFlag(worldT);
   combatK = lerp(combatK, actors.some(a => hostile(a) && !a.dead && a.pos.distanceTo(pp) < 50) || S.wanted >= 2 ? 1 : 0, damp(0.8, dt));
   const now = performance.now() / 1000;
   for (const b of bags) {
@@ -740,7 +850,7 @@ function update(dt) {
     siren.g.gain.setTargetAtTime(S.wanted > 0 ? clamp(1 - md / 160, 0, 1) * 0.05 : 0, AC.currentTime, 0.1);
   }
   missionUpdate(dt);
-  if (mode === 'play' || mode === 'end') followCamera(dt); else if (mode === 'cut') cutCamera(dt); else titleCamera(dt);
+  if (mode === 'play' || mode === 'end') followCamera(dt); else if (mode === 'cut') cutCamera(dt); else if (mode === 'title') titleCamera(dt);
   const fc = mode === 'title' ? new T.Vector3(-35, 0, -35) : pp;
   sun.position.set(fc.x + sunDir.x * 200, sunDir.y * 200, fc.z + sunDir.z * 200);
   sun.target.position.set(fc.x, 0, fc.z); sun.target.updateMatrixWorld();
@@ -779,19 +889,24 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 /* ───────── boot ───────── */
 if (TOUCH) { document.body.classList.add('touch'); $('touch').hidden = false; $('keysInfo').textContent = 'ג׳ויסטיק לתנועה ונהיגה · גרירה לסיבוב מצלמה · "אגרוף/ירי" לתקיפה עם נעילה אוטומטית · "נשק" להחלפה'; }
 const startBtn = $('start');
-startBtn.disabled = false; startBtn.textContent = 'התחל פרק 1';
-startBtn.addEventListener('click', async () => {
+startBtn.disabled = false; startBtn.textContent = 'התחל משימה 01';
+const saved = readCheckpoint();
+if (saved && saved.cp && saved.cp !== 'start') $('resume').hidden = false;
+async function beginGame(cp) {
   initAudio();
-  startBtn.disabled = true; startBtn.textContent = 'טוען קולות…';
+  startBtn.disabled = true; $('resume').disabled = true; startBtn.textContent = 'טוען קולות…';
   const t0 = performance.now();
   while (!voicesReady && performance.now() - t0 < 8000) await new Promise(r => setTimeout(r, 100));
   $('title').hidden = true; document.body.classList.remove('intro'); mode = 'play';
-  cam.yaw = player.facing; cam.pos.copy(camera.position);
-  startStep();
-});
+  if (cp && saved) { S.trust = saved.trust; S.demir = saved.demir; S.money = saved.money || 0; }
+  loadCheckpoint(cp || 'start');
+  cam.pos.copy(camera.position);
+}
+$('resume').addEventListener('click', () => beginGame(saved.cp));
+startBtn.addEventListener('click', () => beginGame(null));
 $('freeRoam').addEventListener('click', () => {
   $('endCard').hidden = true; mode = 'play'; S.free = true;
-  $('ep').textContent = 'Serbest · עולם פתוח'; $('objTxt').textContent = 'העיר שלך. אסוף את שקי הכסף (ירוק במפה) ונקה את השטחים של תייפון (אדום).'; $('timer').hidden = true;
+  $('ep').textContent = 'Serbest · עולם פתוח'; $('objTxt').textContent = 'איסטנבול בלילה. אסוף את שקי הכסף (ירוק במפה) ונקה את השטחים של אנשי מוראט (אדום).'; $('timer').hidden = true;
 });
 requestAnimationFrame(loop);
-window.__game = { S, player, cars, actors, peds, STORY, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };
+window.__game = { S, player, cars, actors, peds, STORY, NPC_ITEMS: ITEM, blackCar, loadCheckpoint, choose: v => choiceCb?.(v), get dlg() { return dlg; }, gps: () => gps, startStep, completeStep, toggleCar, spawnFight, NPC, cam, camera, makeActor, attack, swapWeapon, startDialog, T, get mode() { return mode; }, set mode(v) { mode = v; } };

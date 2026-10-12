@@ -8,7 +8,7 @@ function facade(wall, shutter, trim) {
     for (let r = 1; r < 16; r++) {
       if (!emit) { g.fillStyle = trim; g.fillRect(0, r * 32 - 3, W, 3); }
       for (let k = 0; k < 8; k++) {
-        const x = k * 32 + 9, y = r * 32 + 6, w = 14, h = 20, lit = srand() < 0.32, open = srand() < 0.6;
+        const x = k * 32 + 9, y = r * 32 + 6, w = 14, h = 20, lit = srand() < 0.5, open = srand() < 0.6;
         if (emit) { if (lit) { g.fillStyle = srand() < 0.85 ? '#ffb963' : '#d6e6ff'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill(); } continue; }
         g.fillStyle = trim; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, [9, 9, 2, 2]); g.fill();
         g.fillStyle = lit ? '#ffd79a' : '#3b4b5c'; g.beginPath(); g.roundRect(x, y, w, h, [7, 7, 1, 1]); g.fill();
@@ -18,7 +18,7 @@ function facade(wall, shutter, trim) {
       }
     }
   }, true);
-  const m = new T.MeshStandardMaterial({ map: mk(false), emissiveMap: mk(true), emissive: 0xffffff, emissiveIntensity: 1.1, roughness: 0.88 });
+  const m = new T.MeshStandardMaterial({ map: mk(false), emissiveMap: mk(true), emissive: 0xffffff, emissiveIntensity: 1.7, roughness: 0.88, color: 0x6a7088 });
   return m;
 }
 const FACADES = [
@@ -55,18 +55,43 @@ function building(x0, x1, z0, z1, h, m) {
   }
 }
 
+/* lamp light pools on the wet asphalt */
+const POOL = new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+const poolM = new T.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,170,80,.55)'); r.addColorStop(0.5, 'rgba(255,140,60,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }), transparent: true, blending: T.AdditiveBlending, depthWrite: false });
 /* ground, sea, roads */
-const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), mat(0x4b4652, { r: 0.95 }));
+const ground = new T.Mesh(new T.PlaneGeometry(1400, 1020), new T.MeshStandardMaterial({ color: 0x23242c, roughness: 0.16, metalness: 0.45 }));
 ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, 190); ground.receiveShadow = true; scene.add(ground);
-const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), mat(0xb59e86, { r: 0.95 }));
+const dock = new T.Mesh(new T.PlaneGeometry(1400, 34), new T.MeshStandardMaterial({ color: 0x3a3836, roughness: 0.22, metalness: 0.35 }));
 dock.rotation.x = -Math.PI / 2; dock.position.set(0, 0.01, -303); dock.receiveShadow = true; scene.add(dock);
-const sea = new T.Mesh(new T.PlaneGeometry(5000, 2400, 1, 1), new T.MeshPhysicalMaterial({ color: 0x2f8aa0, roughness: 0.12, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.2 }));
+const sea = new T.Mesh(new T.PlaneGeometry(5000, 2400, 1, 1), new T.MeshPhysicalMaterial({ color: 0x0a1a24, roughness: 0.08, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.1 }));
 sea.rotation.x = -Math.PI / 2; sea.position.set(0, -0.6, -1520); scene.add(sea);
 mesh(RBOX, mat(0xe5d3b8), scene, 0, -0.3, -320.5, 1400, 1.0, 1.0, false);
 addCol(-700, 700, -340, -319);
 for (let x = -280; x <= 280; x += 8) addInst('bollard', CYL, mat(0x3a3a46), x, 0.35, -318.6, 0.2, 0.7, 0.2);
+/* Karaköy waterfront: promenade lamps, neon, a flag and a lit ferry on the Bosphorus */
+for (let x = -276; x <= 276; x += 16) {
+  addInst('pole', CYL8, mat(0x2d3a35, { m: 0.5, r: 0.4 }), x, 2.4, -316.5, 0.08, 4.8, 0.08, 0, 0, 0, null, true);
+  addInst('lamp', SPHM, mat(0x222222, { e: 0xffb860, ei: 6 }), x, 4.9, -316.5, 0.28, 0.34, 0.28);
+  addInst('pool', POOL, poolM, x, 0.03, -315, 8, 1, 8);
+}
+const neonTex = (txt, col) => canvasTex(512, 128, g => { g.fillStyle = 'rgba(0,0,0,0)'; g.clearRect(0, 0, 512, 128); g.font = 'bold 72px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = col; g.shadowBlur = 18; g.fillStyle = col; g.fillText(txt, 256, 66); g.fillText(txt, 256, 66); });
+function neon(txt, col, x, y, z, ry, w = 10) { const t = neonTex(txt, col); const m = mesh(new T.PlaneGeometry(w, w / 4), new T.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, color: 0xffffff }), scene, x, y, z, 1, 1, 1, false); m.rotation.y = ry; return m; }
+neon('KARAKÖY', '#ff4a4a', -60, 8.5, -270.8, Math.PI, 12);
+neon('LOKANTA', '#ffc070', 20, 6, -270.8, Math.PI, 8);
+neon('MEYHANE', '#ff5aa0', 120, 7, -270.8, Math.PI, 9);
+{
+  const fl = canvasTex(192, 128, g => { g.fillStyle = '#e30a17'; g.fillRect(0, 0, 192, 128); g.fillStyle = '#fff'; g.beginPath(); g.arc(78, 64, 34, 0, TAU); g.fill(); g.fillStyle = '#e30a17'; g.beginPath(); g.arc(88, 64, 27, 0, TAU); g.fill(); g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 6 : 15; g.lineTo(122 + Math.cos(a) * r, 64 + Math.sin(a) * r); } g.fill(); });
+  mesh(CYL8, mat(0xcfd3d6, { m: 1, r: 0.3 }), scene, -100, 5, -310, 0.07, 10, 0.07);
+  const flag = mesh(new T.PlaneGeometry(3, 2, 12, 1), new T.MeshStandardMaterial({ map: fl, side: T.DoubleSide, roughness: 0.8 }), scene, -98.5, 9, -310, 1, 1, 1, false);
+  window.__flag = flag;
+}
+const ferry = grp(scene, -40, -0.3, -380);
+mesh(RBOX, mat(0xe8e8e8, { r: 0.5 }), ferry, 0, 1, 0, 30, 2.4, 8);
+mesh(RBOX, mat(0x202838, { r: 0.4 }), ferry, 0, 3, 0, 22, 2, 6);
+for (let i = -5; i <= 5; i++) mesh(BOX, mat(0x111111, { e: 0xffd28a, ei: 4 }), ferry, i * 1.9, 3, 3.05, 1.2, 0.8, 0.05, false);
+mesh(SPHL, mat(0x111111, { e: 0xff3030, ei: 5 }), ferry, 14, 4.5, 0, 0.25, 0.25, 0.25, false);
 
-const pave = mat(0xdac9b0, { r: 0.92 });
+const pave = new T.MeshStandardMaterial({ color: 0x6e665c, roughness: 0.3, metalness: 0.2 });
 const dashM = mat(0xfff4dc, { r: 0.8 });
 for (let k = 0; k <= NB; k++) {
   const r = roadAt(k);
@@ -108,7 +133,8 @@ for (let k = 0; k <= NB; k++) for (let v = -262; v <= 262; v += 35) {
   for (const [x, z, ry] of [[r + 7, v, 0], [v, r - 7, 1]]) {
     addInst('pole', CYL8, mat(0x2d3a35, { m: 0.5, r: 0.4 }), x, 3.2, z, 0.1, 6.4, 0.1, 0, 0, 0, null, true);
     addInst('lampArm', CYL8, mat(0x2d3a35, { m: 0.5, r: 0.4 }), x - (ry ? 0 : 0.5), 6.3, z + (ry ? 0.5 : 0), 0.05, 1.0, 0.05, ry ? Math.PI / 2 : 0, 0, ry ? 0 : Math.PI / 2);
-    addInst('lamp', SPHM, mat(0x222222, { e: 0xffcf86, ei: 3.2 }), x - (ry ? 0 : 1), 6.2, z + (ry ? 1 : 0), 0.32, 0.4, 0.32);
+    addInst('lamp', SPHM, mat(0x222222, { e: 0xffb860, ei: 6 }), x - (ry ? 0 : 1), 6.2, z + (ry ? 1 : 0), 0.32, 0.4, 0.32);
+    addInst('pool', POOL, poolM, x - (ry ? 0 : 1), 0.03, z + (ry ? 1 : 0), 9, 1, 9);
   }
 }
 function tree(x, z, s = 1) {
@@ -229,9 +255,9 @@ function yali(cx, cz) {
   for (const x of [-14, 14]) tree(cx + x, cz + 2, 1.1);
 }
 function farShore() {
-  const hill = mat(0x8d6f8f, { fog: false, r: 1 });
+  const hill = mat(0x16121e, { fog: false, r: 1 });
   for (let i = 0; i < 9; i++) mesh(SPHM, hill, scene, -1500 + i * 380, -40, -1650 + sr(-80, 80), 420, sr(70, 150), 160, false);
-  const sil = mat(0x7a5f80, { fog: false, r: 1 });
+  const sil = mat(0x0f0d16, { fog: false, r: 1 });
   for (let i = 0; i < 70; i++) { const h = sr(15, 60); mesh(BOX, sil, scene, sr(-1500, 1500), h / 2, sr(-1560, -1500), sr(15, 40), h, 20, false); }
   for (let i = 0; i < 6; i++) { const x = sr(-1200, 1200); mesh(CYL8, sil, scene, x, 60, -1490, 3, 120, 3, false); mesh(SPHL, sil, scene, x + 25, 30, -1495, 26, 26, 26, false); }
   const P = []; for (let i = 0; i < 900; i++) P.push(sr(-1500, 1500), sr(2, 70), sr(-1580, -1480));
@@ -244,7 +270,7 @@ function farShore() {
   scene.add(new T.Line(new T.BufferGeometry().setFromPoints(cab), new T.LineBasicMaterial({ color: 0x5a4560, fog: false })));
   const dl = []; for (let i = 0; i < 120; i++) dl.push(-1300 + i * 20, 66, -1093);
   const dg = new T.BufferGeometry(); dg.setAttribute('position', new T.Float32BufferAttribute(dl, 3));
-  scene.add(new T.Points(dg, new T.PointsMaterial({ color: 0xc3a8ff, size: 4, fog: false })));
+  scene.add(new T.Points(dg, new T.PointsMaterial({ color: 0xff3a3a, size: 4, fog: false })));
 }
 
 /* city */

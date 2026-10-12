@@ -27,19 +27,19 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.05;
 renderer.outputColorSpace = T.SRGBColorSpace;
 $('game').appendChild(renderer.domElement);
 
 const scene = new T.Scene();
-scene.fog = new T.Fog(0xf2b58e, 90, LOW ? 400 : 520);
+scene.fog = new T.Fog(0x161c2c, 35, LOW ? 260 : 330);
 const camera = new T.PerspectiveCamera(56, innerWidth / innerHeight, 0.1, 2600);
 
 let composer = null;
 if (!LOW) {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / 2, innerHeight / 2), 0.32, 0.55, 0.88));
+  composer.addPass(new UnrealBloomPass(new T.Vector2(innerWidth / 2, innerHeight / 2), 0.62, 0.6, 0.62));
   composer.addPass(new OutputPass());
 }
 
@@ -49,11 +49,11 @@ const sky = new T.Mesh(new T.SphereGeometry(2000, 32, 16), new T.ShaderMaterial(
   vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `varying vec3 vD; uniform vec3 sunDir;
     void main(){ float h = vD.y;
-      vec3 top = vec3(0.30,0.48,0.78), mid = vec3(0.98,0.66,0.52), hor = vec3(1.0,0.84,0.60);
+      vec3 top = vec3(0.02,0.03,0.08), mid = vec3(0.07,0.07,0.15), hor = vec3(0.26,0.16,0.20);
       vec3 c = mix(hor, mid, smoothstep(0.0, 0.16, h)); c = mix(c, top, smoothstep(0.14, 0.7, h));
       if (h < 0.0) c = mix(hor, vec3(0.55,0.42,0.48), smoothstep(0.0, -0.15, h));
       float s = max(dot(vD, sunDir), 0.0);
-      c += vec3(1.0,0.62,0.32) * pow(s, 6.0) * 0.45 + vec3(1.0,0.92,0.75) * pow(s, 500.0) * 3.0;
+      c += vec3(0.5,0.6,0.9) * pow(s, 30.0) * 0.25 + vec3(0.9,0.93,1.0) * pow(s, 2000.0) * 2.0;
       gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
@@ -62,7 +62,7 @@ const sky = new T.Mesh(new T.SphereGeometry(2000, 32, 16), new T.ShaderMaterial(
 scene.add(sky);
 // painterly clouds
 {
-  const cm = new T.MeshBasicMaterial({ color: 0xffd9c2, fog: false, transparent: true, opacity: 0.9 });
+  const cm = new T.MeshBasicMaterial({ color: 0x1a1f2e, fog: false, transparent: true, opacity: 0.85 });
   for (let i = 0; i < 26; i++) {
     const g = new T.Group(), a = sr(0, TAU), d = sr(900, 1500);
     for (let k = 0; k < 5; k++) { const m = new T.Mesh(new T.SphereGeometry(1, 12, 8), cm); m.position.set(k * 38 - 76 + sr(-10, 10), sr(-6, 12), sr(-10, 10)); m.scale.set(sr(30, 55), sr(14, 24), sr(20, 30)); g.add(m); }
@@ -70,16 +70,38 @@ scene.add(sky);
   }
 }
 
-const hemi = new T.HemisphereLight(0xffe3c4, 0x6b5a78, 1.25);
+const hemi = new T.HemisphereLight(0x5a6c9a, 0x2a1c1c, 0.75);
 scene.add(hemi);
-const sun = new T.DirectionalLight(0xffc08a, 2.6);
+const sun = new T.DirectionalLight(0xa9bcff, 0.75);
 sun.castShadow = true;
 sun.shadow.mapSize.set(LOW ? 1024 : 2048, LOW ? 1024 : 2048);
 const SR = LOW ? 45 : 62;
 Object.assign(sun.shadow.camera, { left: -SR, right: SR, top: SR, bottom: -SR, near: 1, far: 420 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.05;
 scene.add(sun, sun.target);
-const rim = new T.DirectionalLight(0x9ab8ff, 0.55); rim.position.set(1, 0.8, 1); scene.add(rim);
+const rim = new T.DirectionalLight(0xff9a50, 0.45); rim.position.set(1, 0.6, 1); scene.add(rim);
+// wet-night reflections: a dim environment of warm windows, red neon and sodium lamps
+{
+  const env = new T.Scene(); env.background = new T.Color(0x05070d);
+  const em = (c, i) => new T.MeshBasicMaterial({ color: new T.Color(c).multiplyScalar(i) });
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU, m = new T.Mesh(new T.BoxGeometry(2, rnd(1, 4), 0.2), em(pick([0xffb050, 0xff6040, 0xffd090, 0x6080ff]), rnd(0.5, 1.6))); m.position.set(Math.cos(a) * 12, rnd(-1, 5), Math.sin(a) * 12); m.lookAt(0, 0, 0); env.add(m); }
+  const pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, 0.04).texture;
+}
+/* rain: streaks that follow the camera */
+const RAIN_N = LOW ? 900 : 2200, rainPos = new Float32Array(RAIN_N * 6);
+const rainGeo = new T.BufferGeometry(); rainGeo.setAttribute('position', new T.BufferAttribute(rainPos, 3));
+const rain = new T.LineSegments(rainGeo, new T.LineBasicMaterial({ color: 0x9fb2d8, transparent: true, opacity: 0.38, fog: true }));
+rain.frustumCulled = false; scene.add(rain);
+for (let i = 0; i < RAIN_N; i++) { const x = rnd(-35, 35), y = rnd(0, 30), z = rnd(-35, 35); rainPos.set([x, y, z, x + 0.05, y + 0.7, z], i * 6); }
+function updateRain(dt, c) {
+  for (let i = 0; i < RAIN_N; i++) {
+    const o = i * 6; let y = rainPos[o + 1] - dt * 22;
+    let x = rainPos[o], z = rainPos[o + 2];
+    if (y < 0 || Math.abs(x - c.x) > 35 || Math.abs(z - c.z) > 35) { x = c.x + rnd(-35, 35); z = c.z + rnd(-35, 35); y = c.y + rnd(5, 25); }
+    rainPos[o] = x; rainPos[o + 1] = y; rainPos[o + 2] = z; rainPos[o + 3] = x + 0.05; rainPos[o + 4] = y + 0.7; rainPos[o + 5] = z;
+  }
+  rainGeo.attributes.position.needsUpdate = true;
+}
 
 /* ───────── helpers ───────── */
 const matCache = new Map();

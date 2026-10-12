@@ -77,6 +77,7 @@ function sfx(kind, pos) {
   if (kind === 'whiz') burst(2500, 0.12, 0.15, 3, 'bandpass');
   if (kind === 'crash') { burst(900, 0.5, 0.6); thump(90, 40, 0.3, 0.6); }
   if (kind === 'thud' || kind === 'door' || kind === 'fall') { burst(300, 0.18, 0.4); thump(80, 40, 0.2, 0.4); }
+  if (kind === 'ring') for (const d of [0, 0.5, 1.2, 1.7]) for (const f of [1320, 1660]) { const o = AC.createOscillator(), g = AC.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.05, t + d + 0.02); g.gain.setValueAtTime(0.05, t + d + 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.4); o.connect(g).connect(out); o.start(t + d); o.stop(t + d + 0.45); }
   if (kind === 'eat') { burst(2000, 0.08, 0.2, 2, 'bandpass'); }
   if (kind === 'win' || kind === 'fail') (kind === 'win' ? [0, 4, 7, 12] : [0, 1, -4]).forEach((s, i) => pluck(146.83 * Math.pow(2, s / 12), t + i * 0.12, 0.16, out));
 }
@@ -88,7 +89,7 @@ function honk(pos) {
 }
 
 /* voices: decoded once, played through an analyser so the speaker's jaw follows the words */
-const VOICE_IDS = ['k1', 'r1', 'k2', 'r2', 'k3', 'z1', 'z2', 'r3', 'z3', 'r4', 'h1', 'r5', 'h2', 'r6', 't0', 't1', 'r7', 't2', 'r8', 't3', 'b1', 'b2', 'b3', 'rb1', 'rb2', 'pol', 'ped'];
+const VOICE_IDS = ['k1', 'r1', 'k2', 'r2', 'k3', 'z1', 'z2', 'r3', 'z3', 'r4', 'h1', 'r5', 'h2', 'r6', 't0', 't1', 'r7', 't2', 'r8', 't3', 'b1', 'b2', 'b3', 'rb1', 'rb2', 'pol', 'ped', 'm_e1', 'm_b1', 'm_e2', 'm_e3', 'm_e4', 'm_s1', 'm_b2', 'm_b3', 'm_d1', 'm_b4', 'm_b5', 'm_d2', 'm_d3', 'm_e5', 'm_b6'];
 const voices = {};
 let voicesReady = false;
 async function loadVoices() {
@@ -103,7 +104,10 @@ function say(id, human, pos, opts = {}) {
   const src = AC.createBufferSource(); src.buffer = voices[id];
   const an = AC.createAnalyser(); an.fftSize = 256;
   const g = AC.createGain(); g.gain.value = (opts.vol ?? 1) * (pos ? distVol(pos, 45) : 1);
-  src.connect(an); an.connect(g).connect(voiceG);
+  src.connect(an);
+  if (opts.phone) { const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 420; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; an.connect(hp).connect(lp).connect(g); g.gain.value *= 1.25; }
+  else an.connect(g);
+  g.connect(voiceG);
   if (combatK > 0.3 && musicG) musicG.gain.setTargetAtTime(0.12, AC.currentTime, 0.1);
   const entry = { src, an, human, data: new Uint8Array(an.fftSize), done: false };
   src.onended = () => { entry.done = true; if (human) human.talk = 0; };
