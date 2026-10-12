@@ -7,6 +7,8 @@ const player = { h: createHuman(REIS), pos: START.clone(), facing: Math.PI / 2, 
   hp: 100, dead: false, deadT: 0, weapon: 'fist', hasPistol: false, ammo: 0, reserve: 0, reload: 0, combo: 0, comboT: 0, atkCd: 0, pending: null,
   aiming: false, weaponOut: false, hurtT: 9, lock: null };
 scene.add(player.h.root);
+// the player's own rigged model (generated from his reference image); the procedural body stays until it is present
+attachRealBody(player.h, 'models/reis.glb', { height: 1.78, yaw: Math.PI });
 const playerPos = () => player.car ? player.car.pos : player.pos;
 
 const NPC = {};
@@ -700,6 +702,7 @@ function update(dt) {
   listener.copy(camera.position);
   if (mode === 'play') { if (player.car) updateDrive(dt); else updateFoot(dt); }
   else if (!player.car) { animateHuman(player.h, dt, 0, {}); player.h.root.rotation.y = player.facing; player.h.root.position.copy(player.pos); }
+  syncRealBody(player.h, dt, player.car ? 0 : (mode === 'play' ? player.speed : 0), { seated: !!player.car, car: !!player.car });
   const pp = playerPos();
   const obstacles = cars.map(c => c.pos);
   const pObs = { x: pp.x, z: pp.z, isPlayer: true }; obstacles.push(pObs);
