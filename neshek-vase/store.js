@@ -115,8 +115,8 @@
 
     /* session */
     session() { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; } },
-    login(s) { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); },
-    logout() { localStorage.removeItem(SESSION_KEY); },
+    login(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) { /* blocked */ } },
+    logout() { try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* blocked */ } },
 
     /* parents */
     parent(id) { return data.parents.find((p) => p.id === id); },

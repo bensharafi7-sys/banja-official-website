@@ -101,6 +101,13 @@
     onMount && onMount($modal.querySelector('.modal'));
   }
   function closeModal() { $modal.innerHTML = ''; }
+  // in-page confirmation (native confirm() is blocked in some embedded views)
+  function askConfirm(msg, label, onYes) {
+    openModal(`<h2>רגע, לוודא</h2><p>${esc(msg)}</p>
+      <div class="btn-row"><button class="btn red" id="cyes" style="flex:1">${esc(label)}</button><button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
+      root.querySelector('#cyes').onclick = () => { closeModal(); onYes(); };
+    });
+  }
 
   /* ---------- PWA install ---------- */
   let deferredPrompt = null;
@@ -137,8 +144,9 @@
   }
 
   /* ---------- routing ---------- */
-  const route = () => (location.hash.replace(/^#\/?/, '') || '').split('/');
-  const go = (h) => { location.hash = '#/' + h; };
+  // plain #name hashes (e.g. #admin-today) so links work in any host
+  const route = () => (location.hash.replace(/^#\/?/, '') || '').split(/[-/]/);
+  const go = (h) => { location.hash = '#' + h.replace('/', '-'); };
   let viewState = {};
 
   function render() {
@@ -169,7 +177,7 @@
 
   function topbar(sub) {
     return `<header class="topbar">
-      <a class="brand" href="#/">
+      <a class="brand" href="#">
         <img class="brand-mark" src="icons/icon.svg" alt="">
         <div class="brand-text"><div class="brand-title"><span class="a">נשק</span> <span class="b">וסע</span></div>
         <div class="brand-sub">${esc(sub || 'סע לשלום · ' + Store.settings.schoolName)}</div></div>
@@ -177,7 +185,7 @@
       <button class="icon-btn" data-a="logout" aria-label="יציאה מהחשבון" title="יציאה">${ic('logout')}</button>
     </header>`;
   }
-  const navLink = (h, icon, label, on) => `<a href="#/${h}" class="${on ? 'on' : ''}">${ic(icon)}<span>${label}</span></a>`;
+  const navLink = (h, icon, label, on) => `<a href="#${h.replace('/', '-')}" class="${on ? 'on' : ''}">${ic(icon)}<span>${label}</span></a>`;
   const parentNav = (a) => `<nav class="nav">${navLink('home', 'home', 'בית', a === 'home')}${navLink('schedule', 'cal', 'לוח משמרות', a === 'schedule')}${navLink('history', 'history', 'הנוכחות שלי', a === 'history')}${navLink('info', 'info', 'מידע', a === 'info')}</nav>`;
   const adminNav = (b) => `<nav class="nav">${navLink('admin/today', 'bolt', 'היום', b === 'today')}${navLink('admin/calendar', 'cal', 'שיבוץ', b === 'calendar')}${navLink('admin/parents', 'users', 'הורים', b === 'parents')}${navLink('admin/reports', 'chart', 'דוחות', b === 'reports')}${navLink('admin/settings', 'gear', 'הגדרות', b === 'settings')}</nav>`;
 
@@ -341,7 +349,7 @@
         <div class="stat y"><b>${upcoming.length ? Store.shiftsOf(pid).filter((d) => d > t).length : 0}</b><span>משמרות קרובות</span></div>
       </div>
       ${todayCard}
-      ${upcoming.length ? `<div class="card"><div class="card-title"><h3>המשמרות הבאות שלי</h3><a class="small" href="#/schedule">ללוח המלא</a></div>
+      ${upcoming.length ? `<div class="card"><div class="card-title"><h3>המשמרות הבאות שלי</h3><a class="small" href="#schedule">ללוח המלא</a></div>
         <div class="list">${upcoming.map((d) => `<div class="row"><div class="date-badge"><b>${parseDate(d).getDate()}</b><span>${DOW[dow(d)]}</span></div>
           <div class="who"><b>${fmtLong(d)}</b><span>עם ${Store.team(d).filter((x) => x !== pid).map((x) => esc(Store.parent(x)?.name || '')).join(', ') || '—'}</span></div>${chip('future')}</div>`).join('')}</div></div>` : ''}
       <div class="flyer-strip"><div style="flex:1"><b>סע לשלום</b><div class="small">ביחד ניצור סביבה בטוחה יותר</div></div><span class="eq">= חיים</span></div>`;
@@ -710,8 +718,7 @@
       };
       const del = root.querySelector('#fdel');
       if (del) del.onclick = () => {
-        if (!confirm(`למחוק את ${p.name}? ההורה יוסר גם מכל השיבוצים.`)) return;
-        Store.removeParent(id); closeModal(); toast('ההורה נמחק');
+        askConfirm(`למחוק את ${p.name}? ההורה יוסר גם מכל השיבוצים.`, 'מחיקה', () => { Store.removeParent(id); toast('ההורה נמחק'); });
       };
     });
   }
@@ -816,7 +823,7 @@
       'clear-month': () => {
         const x = parseDate(v); const last = isoDate(new Date(x.getFullYear(), x.getMonth() + 1, 0));
         const from = v < today() ? addDays(today(), 1) : v;
-        if (confirm(`לנקות את כל השיבוצים מ-${fmtFull(from)} עד ${fmtFull(last)}?`)) { Store.clearRange(from, last); toast('השיבוצים נוקו'); }
+        askConfirm(`לנקות את כל השיבוצים מ-${fmtFull(from)} עד ${fmtFull(last)}?`, 'ניקוי', () => { Store.clearRange(from, last); toast('השיבוצים נוקו'); });
       },
       'parent-edit': () => parentModal(el.dataset.id),
       'parent-import': () => importModal(),
@@ -840,7 +847,7 @@
         toast('ההגדרות נשמרו', 'ok');
       },
       backup: () => download(`neshek-vase-backup_${today()}.json`, Store.exportJSON(), 'application/json'),
-      reset: () => { if (confirm('לאפס את כל הנתונים לנתוני הדגמה? פעולה זו אינה הפיכה.')) { Store.resetDemo(); toast('הנתונים אופסו'); } }
+      reset: () => askConfirm('לאפס את כל הנתונים לנתוני הדגמה? פעולה זו אינה הפיכה.', 'איפוס', () => { Store.resetDemo(); toast('הנתונים אופסו'); })
     };
     if (act[a]) act[a]();
   });
