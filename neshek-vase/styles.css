@@ -385,3 +385,26 @@ table.t tr:hover td { background: #fbfaf6; }
 .how .ic svg { width: 22px; height: 22px; }
 .log-row { font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
 .log-row time { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---------- v2: login school badge, codes, notices, splash ---------- */
+.login-school { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; }
+.login-school img { width: 46px; height: auto; border-radius: 8px; box-shadow: var(--shadow); }
+.login-school .login-sub { text-align: right; line-height: 1.35; }
+.demo-box { border: 2px dashed var(--yellow); box-shadow: none; background: #fffdf3; }
+.notice { background: var(--yellow-l); box-shadow: none; border: 1px solid #f1dd94; padding: 14px 16px; }
+.code-big { font-size: 34px; font-weight: 900; letter-spacing: 8px; color: var(--navy); text-align: center; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
+.code-card { background: linear-gradient(160deg, #fff, var(--green-l)); }
+.school-foot { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 4px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.school-foot img { width: 52px; border-radius: 8px; }
+.splash { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.splash img { width: 96px; animation: float 3s ease-in-out infinite; }
+.splash-t { font-size: 36px; font-weight: 900; }
+.splash-t .a { color: var(--navy); }
+.splash-t .b { color: var(--green); }
+.spinner { width: 30px; height: 30px; border-radius: 50%; border: 4px solid var(--green-l); border-top-color: var(--green); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.checkin[disabled] { animation: none; opacity: .85; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }

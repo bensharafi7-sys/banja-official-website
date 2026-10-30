@@ -152,8 +152,8 @@
   function render() {
     const s = Store.session();
     let [a, b] = route();
-    if (!s || (s.role === 'parent' && !Store.parent(s.pid))) {
-      if (s) Store.logout();
+    if (!s || !Store.me()) {
+      if (s) { Store.logout(); return; }
       if (a !== 'login') return go('login');
       $app.innerHTML = viewLogin(); return mountLogin();
     }
@@ -193,81 +193,69 @@
      LOGIN
      ========================================================= */
   function viewLogin() {
-    const tab = viewState.loginTab || 'parent';
+    const setup = Store.needsSetup;
+    const demo = Store.mode === 'local';
+    const t = today();
+    const demoParent = demo && Store.team(t)[0] ? Store.parent(Store.team(t)[0]) : Store.parents[0];
     return `<div class="login">
       <div class="login-hero">
         <img class="logo-big" src="icons/icon.svg" alt="">
         <h1 class="login-title"><span class="a">נשק</span> <span class="b">וסע</span></h1>
         <svg class="login-underline" viewBox="0 0 220 14"><path d="M4 10 Q110 0 216 8" stroke="#f7c51e" stroke-width="6" fill="none" stroke-linecap="round"/></svg>
-        <div class="login-sub">מיזם של הנהגת ההורים · בית הספר ״${esc(Store.settings.schoolName)}״</div>
+        <div class="login-school"><img src="icons/school-logo.jpg" alt="סמל בית הספר מישור הנוף"><div class="login-sub">מיזם של הנהגת ההורים<br>בית הספר ״${esc(Store.settings.schoolName)}״</div></div>
         <div class="login-tag"><span class="brush yellow hand">יחד למען בטחון הילדים שלנו! ♥</span></div>
       </div>
-      <div class="tabs">
-        <button data-a="login-tab" data-v="parent" class="${tab === 'parent' ? 'on' : ''}">${ic('users')} הורה</button>
-        <button data-a="login-tab" data-v="admin" class="${tab === 'admin' ? 'on' : ''}">${ic('shield')} ועד הורים</button>
-      </div>
-      <div class="card">
-        ${tab === 'parent' ? `
-          <div class="card-title"><h3>מי את/ה?</h3><span class="small muted">בחרו את שמכם</span></div>
-          <div class="search">${ic('search')}<input class="input" id="psearch" placeholder="חיפוש לפי שם הורה או ילד/ה" autocomplete="off"></div>
-          <div class="picker" id="plist"></div>
-          <div id="pinbox" class="hidden" style="margin-top:12px">
-            <label class="field"><span>קוד אישי</span><input class="input pin-input" id="ppin" inputmode="numeric" maxlength="6" type="password"></label>
-          </div>
-          <button class="btn green block" id="plogin" disabled style="margin-top:12px">${ic('car')} כניסה</button>
-        ` : `
-          <div class="card-title"><h3>כניסת ועד</h3></div>
-          <p class="small muted mt0">מעקב, שיבוץ ועריכה – לחברי הועד בלבד.</p>
-          <label class="field"><span>קוד ועד</span><input class="input pin-input" id="acode" inputmode="numeric" type="password" maxlength="8" autocomplete="off"></label>
-          <button class="btn block" id="alogin">${ic('shield')} כניסה לממשק הועד</button>
-          <p class="small muted center" style="margin-bottom:0">גרסת הדגמה: הקוד הוא <b>1234</b></p>
-        `}
-      </div>
+      ${setup ? `
+      <form class="card" id="lform">
+        <div class="card-title"><h3>הגדרה ראשונה</h3><span class="chip st-future">חד-פעמי</span></div>
+        <p class="small muted mt0">יוצרים את החשבון הראשון של ועד ההורים. בהמשך תוכלו להוסיף חברי ועד נוספים והורים מתוך האפליקציה.</p>
+        <label class="field"><span>שם מלא</span><input class="input" id="lname" autocomplete="name" required></label>
+        <label class="field"><span>מספר טלפון</span><input class="input" id="lphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="050-0000000" required></label>
+        <label class="field"><span>בחרו קוד אישי (6 ספרות)</span><input class="input pin-input" id="lcode" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" required></label>
+        <button class="btn green block" id="lgo">${ic('shield')} יצירת חשבון ועד</button>
+      </form>` : `
+      <form class="card" id="lform">
+        <div class="card-title"><h3>כניסה</h3><span class="small muted">להורים ולחברי הועד</span></div>
+        <label class="field"><span>מספר טלפון</span><input class="input" id="lphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="050-0000000" required></label>
+        <label class="field"><span>קוד אישי</span><input class="input pin-input" id="lcode" inputmode="numeric" maxlength="6" type="password" autocomplete="current-password" required></label>
+        <button class="btn green block" id="lgo">${ic('car')} כניסה</button>
+        <p class="small muted center" style="margin-bottom:0">את הקוד האישי מקבלים מוועד ההורים. שכחתם? פנו לוועד.</p>
+      </form>
+      ${demo ? `<div class="card demo-box">
+        <div class="card-title"><h3>גרסת הדגמה</h3><span class="chip st-pending">נתונים לדוגמה</span></div>
+        <p class="small muted mt0">הנתונים נשמרים רק במכשיר הזה. כניסה מהירה:</p>
+        <div class="btn-row">
+          ${demoParent ? `<button class="btn sm" data-a="demo-login" data-phone="${esc(demoParent.phone)}">${ic('users')} הורה (${esc(first(demoParent.name))})</button>` : ''}
+          <button class="btn yellow sm" data-a="demo-login" data-phone="0500000000">${ic('shield')} ועד הורים</button>
+        </div>
+        <p class="small muted" style="margin-bottom:0">בדמו הקוד של כולם הוא <b>123456</b></p>
+      </div>` : ''}`}
       <div class="login-foot">סע לשלום = חיים 💚 · ביחד ניצור סביבה בטוחה יותר</div>
     </div>`;
   }
   function mountLogin() {
-    const tab = viewState.loginTab || 'parent';
-    if (tab === 'admin') {
-      const inp = document.getElementById('acode');
-      const doIt = () => {
-        if (inp.value === String(Store.settings.adminCode)) { Store.login({ role: 'admin' }); toast('ברוכים הבאים לממשק הועד', 'ok'); go('admin/today'); }
-        else { toast('קוד שגוי', 'err'); inp.value = ''; inp.focus(); }
-      };
-      document.getElementById('alogin').onclick = doIt;
-      inp.onkeydown = (e) => { if (e.key === 'Enter') doIt(); };
-      return;
-    }
-    let sel = null;
-    const list = document.getElementById('plist');
-    const search = document.getElementById('psearch');
-    const btn = document.getElementById('plogin');
-    const pinbox = document.getElementById('pinbox');
-    const pin = document.getElementById('ppin');
-    const draw = () => {
-      const q = search.value.trim();
-      const ps = Store.parents.filter((p) => p.active && (!q || p.name.includes(q) || (p.child || '').includes(q)));
-      list.innerHTML = ps.map((p) => `<button class="pick ${sel === p.id ? 'on' : ''}" data-id="${p.id}">
-        ${avatar(p, true)}<div class="who"><b>${esc(p.name)}</b><span>${esc(p.child || '')}${p.cls ? ' · ' + esc(p.cls) : ''}</span></div>
-        <div class="check">${sel === p.id ? ic('check') : ''}</div></button>`).join('') || '<div class="empty">לא נמצאו הורים</div>';
+    const form = document.getElementById('lform');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById('lphone').value;
+      const code = document.getElementById('lcode').value.trim();
+      const nameEl = document.getElementById('lname');
+      if (Store.util.normPhone(phone).length < 9) { toast('מספר טלפון לא תקין', 'err'); return; }
+      if (!/^\d{6}$/.test(code)) { toast('הקוד האישי הוא 6 ספרות', 'err'); return; }
+      const btn = document.getElementById('lgo');
+      btn.disabled = true; btn.textContent = 'רגע…';
+      try {
+        if (nameEl) await Store.setup(nameEl.value.trim(), phone, code);
+        else await Store.login(phone, code);
+        const me = Store.me();
+        toast(`שלום ${me ? first(me.name) : ''}! 👋`, 'ok');
+        render();
+      } catch (err) {
+        if (err.message !== 'bad-code') console.error(err);
+        toast(err.message === 'bad-code' ? 'מספר הטלפון או הקוד שגויים' : err.code === 'auth/network-request-failed' ? 'אין חיבור לאינטרנט' : err.code === 'auth/too-many-requests' ? 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות' : 'הכניסה נכשלה. נסו שוב', 'err');
+        btn.disabled = false; btn.innerHTML = `${ic('car')} כניסה`;
+      }
     };
-    draw();
-    search.oninput = draw;
-    list.onclick = (e) => {
-      const b = e.target.closest('.pick'); if (!b) return;
-      sel = b.dataset.id; draw(); btn.disabled = false;
-      const p = Store.parent(sel);
-      pinbox.classList.toggle('hidden', !p.pin);
-      if (p.pin) pin.focus();
-    };
-    const doIt = () => {
-      const p = Store.parent(sel); if (!p) return;
-      if (p.pin && pin.value !== p.pin) { toast('קוד אישי שגוי', 'err'); pin.value = ''; return; }
-      Store.login({ role: 'parent', pid: p.id });
-      toast(`שלום ${first(p.name)}! 👋`, 'ok'); go('home');
-    };
-    btn.onclick = doIt;
-    pin.onkeydown = (e) => { if (e.key === 'Enter') doIt(); };
   }
 
   /* =========================================================
@@ -323,7 +311,7 @@
           </div>
           <div class="btn-row" style="margin-top:16px;position:relative;z-index:1">
             <button class="btn yellow sm" data-a="ics">${ic('cal')} הוספה ליומן</button>
-            ${set.committeePhone ? `<a class="btn ghost sm" href="https://wa.me/${esc(set.committeePhone.replace(/\D/g, '').replace(/^0/, '972'))}?text=${encodeURIComponent('היי, אני ' + p.name + ' וצריך/ה החלפה למשמרת ב-' + fmtFull(next))}" target="_blank" rel="noopener">${ic('swap')} בקשת החלפה</a>` : ''}
+            <button class="btn ghost sm" data-a="swap-req" data-d="${next}">${ic('swap')} בקשת החלפה</button>
           </div>
         </section>`;
       } else {
@@ -348,6 +336,8 @@
         <div class="stat"><b>${mins}</b><span>דקות בפס</span></div>
         <div class="stat y"><b>${upcoming.length ? Store.shiftsOf(pid).filter((d) => d > t).length : 0}</b><span>משמרות קרובות</span></div>
       </div>
+      ${Store.requests.filter((r) => r.pid === pid && r.status === 'open').map((r) => `<div class="card notice"><b>${ic('swap', 'style="width:16px;height:16px;vertical-align:-3px"')} בקשת ההחלפה ל${fmtLong(r.date)} נשלחה לוועד.</b> <span class="small">נעדכן את הלוח כשיימצא/תימצא מחליף/ה.</span></div>`).join('')}
+      ${pushNudge()}
       ${todayCard}
       ${upcoming.length ? `<div class="card"><div class="card-title"><h3>המשמרות הבאות שלי</h3><a class="small" href="#schedule">ללוח המלא</a></div>
         <div class="list">${upcoming.map((d) => `<div class="row"><div class="date-badge"><b>${parseDate(d).getDate()}</b><span>${DOW[dow(d)]}</span></div>
@@ -414,13 +404,18 @@
         <div class="how small">
           <div>✅ ביום המשמרת לחצו <b>״הגעתי!״</b> כשאתם מגיעים לפס, ו<b>״סיימתי״</b> בסוף.</div>
           <div>📅 ב״לוח משמרות״ רואים מי משובץ בכל יום.</div>
-          <div>🔔 הוסיפו את המשמרות ליומן בטלפון כדי לקבל תזכורת.</div>
+          <div>🔔 הפעילו התראות כדי לקבל תזכורת יום לפני המשמרת.</div>
+          <div>📍 ״הגעתי!״ עובד רק ליד בית הספר, לכן צריך לאשר גישה למיקום.</div>
+          <div>🔄 לא יכולים להגיע? שלחו ״בקשת החלפה״ לוועד.</div>
         </div>
         <div class="btn-row" style="margin-top:14px"><button class="btn green sm" data-a="ics">${ic('cal')} כל המשמרות שלי ליומן</button>
         ${!isStandalone() ? `<button class="btn ghost sm" data-a="install">${ic('download')} התקנה על הטלפון</button>` : ''}</div>
       </div>
+      ${Store.mode === 'firebase' && (self.NV_CONFIG || {}).vapidKey ? `<div class="card split"><div style="flex:1;min-width:0"><b>🔔 התראות</b><div class="small muted">${'Notification' in window && Notification.permission === 'granted' ? 'פעילות. תקבלו תזכורת בערב שלפני המשמרת.' : 'תזכורת בערב שלפני המשמרת.'}</div></div>
+        ${'Notification' in window && Notification.permission === 'granted' ? '<span class="chip st-done">פעיל</span>' : '<button class="btn yellow sm" data-a="push">הפעלה</button>'}</div>` : ''}
       <div class="card"><div class="partner">${avatar(p)}<div class="who"><b>${esc(p.name)}</b><span>${esc(p.child || '')}${p.cls ? ' · ' + esc(p.cls) : ''}</span></div>
-        <button class="btn ghost sm" data-a="logout">${ic('logout')} החלפת משתמש</button></div></div>`;
+        <button class="btn ghost sm" data-a="logout">${ic('logout')} החלפת משתמש</button></div></div>
+      <div class="school-foot"><img src="icons/school-logo.jpg" alt=""><div>בית הספר הממלכתי ״${esc(set.schoolName)}״<br><span class="hand" style="font-size:22px">להקשיב, להבין, לאהוב</span></div></div>`;
   }
 
   /* =========================================================
@@ -459,6 +454,7 @@
         return `<div class="slot st-b-${st}">
           <div class="partner">${avatar(q)}<div class="who"><b>${esc(q.name)}</b><span>${esc(q.child || '')}${q.cls ? ' · ' + esc(q.cls) : ''}</span></div></div>
           <div class="split" style="margin-top:10px">${chip(st, Store.isLate(d, id))}<span class="small muted">${r.in ? 'כניסה ' + esc(r.in) : ''}${r.out ? ' · יציאה ' + esc(r.out) : ''}</span></div>
+          ${r.in && r.geoOk !== undefined ? `<div style="margin-top:6px">${geoChip(r)}</div>` : ''}
           ${r.note ? `<div class="small muted" style="margin-top:6px">📝 ${esc(r.note)}</div>` : ''}
           <div class="acts">
             ${!r.in && st !== 'excused' ? `<button class="btn green sm" data-a="adm-in" data-d="${d}" data-id="${id}">${ic('check')} כניסה</button>` : ''}
@@ -468,6 +464,8 @@
           </div></div>`;
       }).join('') || '<div class="card empty">לא שובצו הורים ליום זה</div>'}</div>
       <div class="btn-row" style="margin-top:12px"><button class="btn ghost sm" data-a="day" data-d="${d}">${ic('swap')} שינוי שיבוץ ליום זה</button></div>`}
+      ${requestsCard()}
+      ${remindersCard()}
       <div class="section-label">שבועיים קרובים</div>
       <div class="card">${gaps.length ? `<div class="card-title"><h3>⚠️ ימים חסרים</h3><span class="chip st-missed">${gaps.length}</span></div>
         <div class="btn-row">${gaps.map((x) => `<button class="btn ghost sm" data-a="day" data-d="${x}">${DOW[dow(x)]} ${fmtDM(x)} · ${Store.team(x).length}/${Store.settings.perShift}</button>`).join('')}</div>`
@@ -518,8 +516,9 @@
     const ps = Store.parents.filter((p) => !q || p.name.includes(q) || (p.child || '').includes(q) || (p.phone || '').includes(q));
     return `<div class="split" style="margin-bottom:14px">
         <h2 style="margin:0;color:var(--navy)">הורים <span class="chip st-future">${Store.parents.filter((p) => p.active).length} פעילים</span></h2>
-        <div class="btn-row"><button class="btn green sm" data-a="parent-edit">${ic('plus')} הורה חדש</button><button class="btn ghost sm" data-a="parent-import">${ic('upload')} ייבוא רשימה</button></div>
+        <div class="btn-row"><button class="btn green sm" data-a="parent-edit">${ic('plus')} הורה חדש</button><button class="btn ghost sm" data-a="parent-import">${ic('upload')} ייבוא מאקסל</button><button class="btn ghost sm" data-a="csv-codes">${ic('download')} רשימת קודים</button></div>
       </div>
+      ${Store.mode === 'firebase' && Store.parents.some((p) => p.active && !p.uid) ? `<div class="card notice"><b>${Store.parents.filter((p) => p.active && !p.uid).length} הורים עוד לא נכנסו לאפליקציה.</b> <span class="small">פתחו הורה ולחצו ״שליחה בוואטסאפ״ כדי לשלוח לו/ה את הקישור והקוד.</span></div>` : ''}
       <div class="search" style="margin-bottom:14px">${ic('search')}<input class="input" id="pq" placeholder="חיפוש הורה, ילד/ה או טלפון" value="${esc(q)}"></div>
       <div class="card"><div class="list">${ps.map((p) => {
         const all = Store.shiftsOf(p.id);
@@ -527,6 +526,7 @@
         const done = past.filter((d) => Store.status(d, p.id) === 'done').length;
         return `<div class="row clickable" data-a="parent-edit" data-id="${p.id}" style="${p.active ? '' : 'opacity:.5'}">
           ${avatar(p, true)}<div class="who"><b>${esc(p.name)}</b><span>${esc(p.child || '')}${p.cls ? ' · ' + esc(p.cls) : ''}${p.phone ? ' · ' + esc(p.phone) : ''}</span></div>
+          ${Store.mode === 'firebase' ? (p.uid ? '<span class="chip st-done">מחובר/ת</span>' : '<span class="chip st-pending">לא נכנס/ה</span>') : ''}
           <span class="small muted" style="text-align:left">${done}/${past.length} נוכחות<br>${all.length - past.length} עתידיות</span>
         </div>`;
       }).join('') || '<div class="empty">לא נמצאו הורים</div>'}</div></div>`;
@@ -604,15 +604,32 @@
       </div>
       <div class="card"><div class="card-title"><h3>בית הספר והועד</h3></div>
         <label class="field"><span>שם בית הספר</span><input class="input" id="sSchool" value="${esc(s.schoolName)}"></label>
-        <label class="field"><span>טלפון רכז/ת הועד (לבקשות החלפה בוואטסאפ)</span><input class="input" id="sPhone" inputmode="tel" value="${esc(s.committeePhone)}" placeholder="050-0000000"></label>
-        <label class="field"><span>קוד כניסת ועד</span><input class="input" id="sCode" inputmode="numeric" value="${esc(s.adminCode)}"></label>
+        <label class="field" style="margin-bottom:0"><span>טלפון רכז/ת הועד (לפניות דחופות בוואטסאפ)</span><input class="input" id="sPhone" type="tel" inputmode="tel" value="${esc(s.committeePhone)}" placeholder="050-0000000"></label>
+      </div>
+      <div class="card"><div class="card-title"><h3>📍 אימות מיקום בהגעה</h3></div>
+        <label class="field"><span>מצב</span><select class="input" id="gMode">
+          <option value="block" ${s.geoMode === 'block' ? 'selected' : ''}>חובה – אי אפשר לסמן הגעה רחוק מבית הספר</option>
+          <option value="flag" ${s.geoMode === 'flag' ? 'selected' : ''}>גמיש – מאפשר, אבל מסמן לוועד ״לא אומת״</option>
+          <option value="off" ${s.geoMode === 'off' ? 'selected' : ''}>כבוי</option>
+        </select></label>
+        <div class="grid2">
+          <label class="field"><span>קו רוחב</span><input class="input" id="gLat" inputmode="decimal" dir="ltr" value="${esc(s.geoLat ?? '')}" placeholder="31.7…"></label>
+          <label class="field"><span>קו אורך</span><input class="input" id="gLng" inputmode="decimal" dir="ltr" value="${esc(s.geoLng ?? '')}" placeholder="35.2…"></label>
+        </div>
+        <label class="field"><span>רדיוס מותר (מטרים)</span><input class="input" type="number" min="30" max="2000" id="gRad" value="${s.geoRadius}"></label>
+        <div class="btn-row"><button class="btn ghost sm" data-a="geo-here">${ic('bolt')} המיקום שלי עכשיו</button>
+        ${s.geoLat ? `<a class="btn ghost sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${esc(s.geoLat)},${esc(s.geoLng)}">הצגה במפה</a>` : ''}</div>
+        <p class="small muted" style="margin-bottom:0">הכי פשוט: לעמוד ליד הפס הירוק, ללחוץ ״המיקום שלי עכשיו״ ואז ״שמירת הגדרות״.${!s.geoLat ? ' <b>כל עוד לא הוגדר מיקום, הבדיקה לא פעילה.</b>' : ''}</p>
       </div>
       <button class="btn green block" data-a="save-settings">${ic('check')} שמירת הגדרות</button>
+      <div class="section-label">חברי ועד</div>
+      <div class="card"><div class="list">${Store.committee.map((c) => `<div class="row clickable" data-a="committee-edit" data-id="${c.id}">${avatar(c, true)}<div class="who"><b>${esc(c.name)}${c.id === Store.session().cid ? ' (את/ה)' : ''}</b><span dir="ltr">${esc(c.phone)}</span></div>${Store.mode === 'firebase' ? (c.uid ? '<span class="chip st-done">מחובר/ת</span>' : '<span class="chip st-pending">לא נכנס/ה</span>') : ''}</div>`).join('')}</div>
+        <button class="btn ghost sm" data-a="committee-edit" style="margin-top:10px">${ic('plus')} הוספת חבר/ת ועד</button></div>
       <div class="section-label">גיבוי נתונים</div>
-      <div class="card"><p class="small muted mt0">הורדת קובץ גיבוי מלא או שחזור ממנו.</p>
+      <div class="card"><p class="small muted mt0">${Store.mode === 'firebase' ? 'הנתונים נשמרים בענן (Firebase). אפשר להוריד עותק לגיבוי.' : 'גרסת הדגמה: הנתונים נשמרים רק במכשיר הזה.'}</p>
         <div class="btn-row"><button class="btn ghost sm" data-a="backup">${ic('download')} הורדת גיבוי</button>
-        <label class="btn ghost sm">${ic('upload')} שחזור מגיבוי<input type="file" accept=".json,application/json" id="restore" hidden></label>
-        <button class="btn red sm" data-a="reset">${ic('trash')} איפוס לנתוני הדגמה</button></div></div>
+        ${Store.mode === 'local' ? `<label class="btn ghost sm">${ic('upload')} שחזור מגיבוי<input type="file" accept=".json,application/json" id="restore" hidden></label>
+        <button class="btn red sm" data-a="reset">${ic('trash')} איפוס לנתוני הדגמה</button>` : ''}</div></div>
       <div class="section-label">יומן פעולות</div>
       <div class="card" style="max-height:320px;overflow:auto">${Store.log.map((l) => `<div class="log-row"><time>${new Date(l.t).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</time><div><b>${esc(l.action)}</b> · ${esc(l.detail)} <span class="muted">(${esc(l.who)})</span></div></div>`).join('') || '<div class="empty">ריק</div>'}</div>`;
   }
@@ -690,54 +707,100 @@
   }
 
   function parentModal(id) {
-    const p = id ? { ...Store.parent(id) } : { name: '', phone: '', child: '', cls: '', pin: '', active: true };
+    const p = id ? { ...Store.parent(id) } : { name: '', phone: '', child: '', cls: '', active: true };
     openModal(`<h2>${id ? 'עריכת הורה' : 'הורה חדש'}</h2>
       <div class="card">
         <label class="field"><span>שם ההורה *</span><input class="input" id="fn" value="${esc(p.name)}"></label>
-        <label class="field"><span>טלפון</span><input class="input" id="fp" inputmode="tel" value="${esc(p.phone)}"></label>
+        <label class="field"><span>טלפון * (משמש לכניסה)</span><input class="input" id="fp" type="tel" inputmode="tel" value="${esc(p.phone)}"></label>
         <div class="grid2">
           <label class="field"><span>שם הילד/ה</span><input class="input" id="fc" value="${esc(p.child)}"></label>
           <label class="field"><span>כיתה</span><input class="input" id="fk" value="${esc(p.cls)}"></label>
         </div>
-        <label class="field"><span>קוד אישי לכניסה (לא חובה)</span><input class="input" id="fpin" inputmode="numeric" maxlength="6" value="${esc(p.pin)}" placeholder="ריק = כניסה ללא קוד"></label>
         <label class="pick ${p.active ? 'on' : ''}" id="fact" style="cursor:pointer"><div class="check">${p.active ? ic('check') : ''}</div><div class="who"><b>פעיל/ה</b><span>משתתף/ת בשיבוץ האוטומטי</span></div></label>
       </div>
-      ${id ? `<div class="card"><div class="small muted">${Store.shiftsOf(id).length} משמרות בסך הכל</div></div>` : ''}
+      ${id ? codeCard('parent', id) + `<p class="small muted">${Store.shiftsOf(id).length} משמרות בסך הכל השנה</p>` : '<p class="small muted">אחרי השמירה ייווצר קוד אישי שאפשר לשלוח להורה בוואטסאפ.</p>'}
       <div class="btn-row"><button class="btn green" id="fsave" style="flex:1">${ic('check')} שמירה</button>
-      ${id ? `<button class="btn red" id="fdel">${ic('trash')}</button>` : ''}<button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
+      ${id ? `<button class="btn red" id="fdel" aria-label="מחיקה">${ic('trash')}</button>` : ''}<button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
+      if (id) mountCodeCard(root, 'parent', id, parentModal);
       const act = root.querySelector('#fact');
       act.onclick = () => { p.active = !p.active; act.classList.toggle('on', p.active); act.querySelector('.check').innerHTML = p.active ? ic('check') : ''; };
-      root.querySelector('#fsave').onclick = () => {
-        p.name = root.querySelector('#fn').value.trim();
-        if (!p.name) { toast('נא להזין שם', 'err'); return; }
-        p.phone = root.querySelector('#fp').value.trim();
-        p.child = root.querySelector('#fc').value.trim();
-        p.cls = root.querySelector('#fk').value.trim();
-        p.pin = root.querySelector('#fpin').value.trim();
-        Store.saveParent(p); closeModal(); toast('נשמר', 'ok');
+      root.querySelector('#fsave').onclick = async () => {
+        const name = root.querySelector('#fn').value.trim();
+        const phone = Store.util.normPhone(root.querySelector('#fp').value);
+        if (!name) { toast('נא להזין שם', 'err'); return; }
+        if (phone.length < 9) { toast('נא להזין טלפון תקין', 'err'); return; }
+        if (Store.parents.some((x) => x.id !== id && Store.util.normPhone(x.phone) === phone)) { toast('כבר יש הורה עם הטלפון הזה', 'err'); return; }
+        const saved = await Store.saveParent({ id: p.id, name, phone, child: root.querySelector('#fc').value.trim(), cls: root.querySelector('#fk').value.trim(), active: p.active });
+        toast('נשמר', 'ok');
+        if (!id) parentModal(saved.id); else closeModal();
       };
       const del = root.querySelector('#fdel');
-      if (del) del.onclick = () => {
-        askConfirm(`למחוק את ${p.name}? ההורה יוסר גם מכל השיבוצים.`, 'מחיקה', () => { Store.removeParent(id); toast('ההורה נמחק'); });
-      };
+      if (del) del.onclick = () => askConfirm(`למחוק את ${p.name}? ההורה יוסר גם מכל השיבוצים.`, 'מחיקה', async () => { await Store.removeParent(id); toast('ההורה נמחק'); });
     });
   }
 
+  /* ---------- import from Excel / CSV / pasted text ---------- */
+  const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  function rowsToParents(rows) {
+    rows = rows.map((r) => r.map((c) => String(c ?? '').trim())).filter((r) => r.some(Boolean));
+    if (!rows.length) return [];
+    // find columns by header names; otherwise assume name, phone, child, class
+    const h = rows[0];
+    const col = (re) => h.findIndex((c) => re.test(c));
+    let idx = { name: col(/שם.*(הורה|מלא)|^שם$|^הורה/), phone: col(/טל|נייד|פלאפון|phone/i), child: col(/ילד|תלמיד|בן|בת/), cls: col(/כית|class/i) };
+    const hasHeader = idx.phone >= 0 && idx.name >= 0;
+    if (!hasHeader) idx = { name: 0, phone: 1, child: 2, cls: 3 };
+    else if (idx.child === idx.name) idx.child = -1;
+    return rows.slice(hasHeader ? 1 : 0).map((r) => ({
+      name: r[idx.name] || '', phone: Store.util.normPhone(r[idx.phone]), child: idx.child >= 0 ? r[idx.child] || '' : '', cls: idx.cls >= 0 ? r[idx.cls] || '' : ''
+    }));
+  }
   function importModal() {
+    let parsed = [];
     openModal(`<h2>ייבוא רשימת הורים</h2>
-      <p class="small muted mt0">שורה לכל הורה, בפורמט: <b>שם, טלפון, שם הילד/ה, כיתה</b><br>אפשר להעתיק עמודות ישירות מאקסל.</p>
-      <textarea class="input" id="imp" rows="8" placeholder="רונית כהן, 050-1234567, נועם, ב׳2"></textarea>
-      <div class="spacer"></div>
-      <div class="btn-row"><button class="btn green" id="impgo" style="flex:1">${ic('upload')} ייבוא</button><button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
-      root.querySelector('#impgo').onclick = () => {
-        const lines = root.querySelector('#imp').value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-        let n = 0;
-        lines.forEach((l) => {
-          const [name, phone, child, cls] = l.split(/\t|,/).map((x) => (x || '').trim());
-          if (!name) return;
-          Store.saveParent({ name, phone: phone || '', child: child || '', cls: cls || '', pin: '', active: true }); n++;
+      <div class="card">
+        <label class="btn ghost block">${ic('upload')} בחירת קובץ אקסל / CSV<input type="file" id="impf" accept=".xlsx,.xls,.csv" hidden></label>
+        <p class="small muted">עמודות: <b>שם ההורה, טלפון, שם הילד/ה, כיתה</b>. שורת כותרות תזוהה אוטומטית.</p>
+        <label class="field" style="margin-bottom:0"><span>או הדביקו שורות (מאקסל או מופרדות בפסיקים)</span><textarea class="input" id="imp" rows="5" placeholder="רונית כהן, 050-1234567, נועם, ב׳2"></textarea></label>
+      </div>
+      <div id="impprev"></div>
+      <div class="btn-row"><button class="btn green" id="impgo" style="flex:1" disabled>${ic('upload')} ייבוא</button><button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
+      const prev = root.querySelector('#impprev'), go = root.querySelector('#impgo');
+      const show = (rows) => {
+        const existing = new Set(Store.parents.map((x) => Store.util.normPhone(x.phone)));
+        const seen = new Set();
+        parsed = [];
+        let bad = 0, dup = 0;
+        rows.forEach((r) => {
+          if (!r.name || r.phone.length < 9) { bad++; return; }
+          if (existing.has(r.phone) || seen.has(r.phone)) { dup++; return; }
+          seen.add(r.phone); parsed.push(r);
         });
-        closeModal(); toast(`יובאו ${n} הורים`, 'ok');
+        go.disabled = !parsed.length;
+        go.innerHTML = `${ic('upload')} ייבוא ${parsed.length} הורים`;
+        prev.innerHTML = `<div class="card"><div class="card-title"><h3>תצוגה מקדימה</h3><span class="chip st-done">${parsed.length} תקינים</span></div>
+          ${bad || dup ? `<p class="small muted mt0">${bad ? `${bad} שורות בלי שם או טלפון תקין ידולגו. ` : ''}${dup ? `${dup} טלפונים כבר קיימים ידולגו.` : ''}</p>` : ''}
+          <div class="table-wrap"><table class="t"><thead><tr><th>שם</th><th>טלפון</th><th>ילד/ה</th><th>כיתה</th></tr></thead><tbody>
+          ${parsed.slice(0, 8).map((r) => `<tr><td>${esc(r.name)}</td><td dir="ltr">${esc(r.phone)}</td><td>${esc(r.child)}</td><td>${esc(r.cls)}</td></tr>`).join('')}
+          </tbody></table></div>${parsed.length > 8 ? `<p class="small muted center" style="margin-bottom:0">ועוד ${parsed.length - 8}…</p>` : ''}</div>`;
+      };
+      root.querySelector('#imp').oninput = (e) => show(rowsToParents(e.target.value.split(/\r?\n/).map((l) => l.split(/\t|,/))));
+      root.querySelector('#impf').onchange = async (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        try {
+          if (/\.csv$/i.test(f.name)) {
+            show(rowsToParents((await f.text()).replace(/^﻿/, '').split(/\r?\n/).map((l) => l.split(/,|\t/).map((c) => c.replace(/^"|"$/g, '')))));
+          } else {
+            if (!window.XLSX) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = XLSX_URL; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+            const wb = XLSX.read(await f.arrayBuffer());
+            show(rowsToParents(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false })));
+          }
+        } catch (x) { console.error(x); toast('לא הצלחנו לקרוא את הקובץ', 'err'); }
+      };
+      go.onclick = async () => {
+        go.disabled = true; go.textContent = 'מייבא…';
+        await Store.importParents(parsed);
+        closeModal(); toast(`יובאו ${parsed.length} הורים. הקודים האישיים מוכנים לשליחה`, 'ok');
       };
     });
   }
@@ -758,11 +821,147 @@
       let ov = false;
       const el = root.querySelector('#aov');
       el.onclick = () => { ov = !ov; el.classList.toggle('on', ov); el.querySelector('.check').innerHTML = ov ? ic('check') : ''; };
-      root.querySelector('#ago').onclick = () => {
+      root.querySelector('#ago').onclick = async () => {
         const from = root.querySelector('#af').value, to = root.querySelector('#at').value;
         if (!from || !to || from > to) { toast('טווח תאריכים לא תקין', 'err'); return; }
-        const n = Store.rotate(from, to, ov); closeModal(); toast(`שובצו ${n} ימים ✨`, 'ok');
+        const n = await Store.rotate(from, to, ov); closeModal(); toast(`שובצו ${n} ימים ✨`, 'ok');
       };
+    });
+  }
+
+
+  function pushNudge() {
+    if (Store.mode !== 'firebase' || !(self.NV_CONFIG || {}).vapidKey || !('Notification' in window) || Notification.permission !== 'default') return '';
+    return `<div class="card notice split"><div style="flex:1;min-width:0"><b>🔔 תזכורת יום לפני המשמרת</b><div class="small">נשלח לך התראה בערב שלפני.</div></div><button class="btn yellow sm" data-a="push">הפעלה</button></div>`;
+  }
+  function requestsCard() {
+    const open = Store.requests.filter((r) => r.status === 'open');
+    if (!open.length) return '';
+    return `<div class="section-label">בקשות החלפה</div><div class="card"><div class="list">${open.map((r) => {
+      const q = Store.parent(r.pid);
+      return `<div class="row">${q ? avatar(q, true) : ''}<div class="who"><b>${esc(q ? q.name : '—')}</b><span>${fmtLong(r.date)}${r.note ? ' · ' + esc(r.note) : ''}</span></div>
+        <div class="btn-row" style="flex-wrap:nowrap"><button class="btn ghost sm" data-a="day" data-d="${r.date}">${ic('swap')} שיבוץ</button><button class="btn green sm" data-a="req-done" data-id="${r.id}" aria-label="טופל">${ic('check')}</button></div></div>`;
+    }).join('')}</div></div>`;
+  }
+  function remindersCard() {
+    let d = addDays(today(), 1);
+    for (let i = 0; i < 7 && !isSchoolDay(d); i++) d = addDays(d, 1);
+    const team = Store.team(d).map(Store.parent).filter(Boolean);
+    if (!team.length) return '';
+    const set = Store.settings;
+    const msg = (q) => `שלום ${first(q.name)}! 🚗\nתזכורת: ${d === addDays(today(), 1) ? 'מחר' : 'ב' + fmtLong(d)} את/ה במשמרת ״נשק וסע״ בפס הירוק, ${set.shiftStart}–${set.shiftEnd}.\nאל תשכח/י ללחוץ ״הגעתי!״ באפליקציה: ${appUrl()}\nתודה! 💚`;
+    return `<div class="section-label">תזכורות</div><div class="card"><div class="card-title"><h3>במשמרת ${d === addDays(today(), 1) ? 'מחר' : fmtLong(d)}</h3><span class="small muted">שליחה ידנית בוואטסאפ</span></div>
+      <div class="list">${team.map((q) => `<div class="row">${avatar(q, true)}<div class="who"><b>${esc(q.name)}</b><span dir="ltr">${esc(q.phone)}</span></div><a class="btn green sm" target="_blank" rel="noopener" href="${waLink(q.phone, msg(q))}">תזכורת בוואטסאפ</a></div>`).join('')}</div></div>`;
+  }
+
+  /* ---------- location check ---------- */
+  const getPosition = () => new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej({ code: 2 });
+    navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  });
+  async function verifyLocation() {
+    const st = Store.settings;
+    if (st.geoMode === 'off' || st.geoLat == null || st.geoLat === '' || st.geoLng == null || st.geoLng === '') return { ok: true, rec: {} };
+    try {
+      const pos = await getPosition();
+      const dist = Math.round(Store.util.haversine(pos.coords.latitude, pos.coords.longitude, +st.geoLat, +st.geoLng));
+      // forgive part of the GPS error margin, but never more than 150 m
+      const near = dist - Math.min(pos.coords.accuracy || 0, 150) <= +st.geoRadius;
+      if (near) return { ok: true, rec: { geoOk: true, geoDist: dist } };
+      return st.geoMode === 'block' ? { ok: false, reason: 'far', dist } : { ok: true, rec: { geoOk: false, geoDist: dist } };
+    } catch (err) {
+      const reason = err && err.code === 1 ? 'denied' : 'unavailable';
+      return st.geoMode === 'block' ? { ok: false, reason } : { ok: true, rec: { geoOk: false, geoDist: null } };
+    }
+  }
+  function locationProblem(g) {
+    const body = {
+      far: `<p>לפי המיקום שלך את/ה במרחק <b>${g.dist >= 1000 ? (g.dist / 1000).toFixed(1) + ' ק״מ' : g.dist + ' מ׳'}</b> מבית הספר.</p><p class="small muted">אפשר לסמן הגעה רק ליד הפס הירוק. אם את/ה כבר שם, חכו כמה שניות שה-GPS יתייצב ונסו שוב.</p>`,
+      denied: `<p>כדי לאמת שהגעת לפס הירוק, האפליקציה צריכה גישה למיקום.</p>
+        <div class="small"><b>אייפון:</b> הגדרות ← פרטיות ואבטחה ← שירותי מיקום ← Safari ← ״בזמן השימוש״.<br><b>אנדרואיד:</b> לחצו על סמל המנעול ליד הכתובת ← הרשאות ← מיקום ← ״אפשר״.</div>`,
+      unavailable: '<p>לא הצלחנו לאתר את המיקום שלך.</p><p class="small muted">ודאו שה-GPS (שירותי מיקום) פועל בטלפון ונסו שוב.</p>'
+    }[g.reason];
+    openModal(`<h2>${g.reason === 'far' ? '📍 את/ה עדיין לא בפס' : '📍 צריך גישה למיקום'}</h2><div class="card">${body}</div>
+      <div class="btn-row"><button class="btn green" data-a="checkin" data-dismiss style="flex:1">${ic('car')} לנסות שוב</button><button class="btn ghost" data-dismiss>סגירה</button></div>
+      <p class="small muted center">לא מסתדר? הועד יכול לסמן את ההגעה שלך ידנית.</p>`);
+  }
+  const geoChip = (r) => !r || r.geoOk === undefined ? '' : r.geoOk
+    ? `<span class="chip st-done" title="מיקום אומת">📍 ${r.geoDist != null ? r.geoDist + ' מ׳' : 'אומת'}</span>`
+    : `<span class="chip st-late" title="ההגעה לא אומתה במיקום">📍 לא אומת${r.geoDist != null ? ' · ' + r.geoDist + ' מ׳' : ''}</span>`;
+
+  /* ---------- WhatsApp helpers ---------- */
+  const appUrl = () => location.origin + location.pathname;
+  const waLink = (phone, text) => `https://wa.me/${phone ? '972' + Store.util.normPhone(phone).replace(/^0/, '') : ''}?text=${encodeURIComponent(text)}`;
+  function codeMessage(kind, id) {
+    const p = kind === 'admin' ? Store.committee.find((c) => c.id === id) : Store.parent(id);
+    return `שלום ${p ? first(p.name) : ''}! 🚗💚\n${kind === 'admin' ? 'נוספת כחבר/ת ועד' : 'הצטרפת למיזם'} "נשק וסע" של בית הספר ${Store.settings.schoolName}.\n\nכניסה לאפליקציה: ${appUrl()}\nטלפון: ${p ? p.phone : ''}\nקוד אישי: ${Store.codeOf(id)}\n\nמומלץ להתקין את האפליקציה על מסך הבית. סע לשלום = חיים!`;
+  }
+  function codeCard(kind, id) {
+    const p = kind === 'admin' ? Store.committee.find((c) => c.id === id) : Store.parent(id);
+    const code = Store.codeOf(id);
+    const signed = p && p.uid;
+    return `<div class="card code-card">
+      <div class="card-title"><h3>קוד אישי</h3>${Store.mode === 'firebase' ? `<span class="chip ${signed ? 'st-done' : 'st-pending'}">${signed ? 'נכנס/ה לאפליקציה' : 'עוד לא נכנס/ה'}</span>` : ''}</div>
+      <div class="code-big" dir="ltr">${esc(code || '——')}</div>
+      <div class="btn-row">
+        <button class="btn green sm" data-a="wa-code" data-kind="${kind}" data-id="${id}" data-phone="${esc(p ? p.phone : '')}">שליחה בוואטסאפ</button>
+        <button class="btn ghost sm" id="newcode">${ic('swap')} קוד חדש</button>
+      </div>
+      <p class="small muted" style="margin-bottom:0">קוד חדש מבטל את הקודם, וצריך להיכנס איתו מחדש.</p>
+    </div>`;
+  }
+  function mountCodeCard(root, kind, id, reopen) {
+    const b = root.querySelector('#newcode');
+    if (b) b.onclick = () => askConfirm('ליצור קוד אישי חדש? הקוד הקודם יפסיק לעבוד.', 'יצירת קוד חדש', async () => {
+      await Store.resetCode(kind, id); toast('נוצר קוד חדש', 'ok'); reopen(id);
+    });
+  }
+
+  /* ---------- swap request (parent → committee) ---------- */
+  function swapModal(pid, date) {
+    const t = today();
+    const future = Store.shiftsOf(pid).filter((d) => d >= t);
+    if (!future.length) { toast('אין משמרות עתידיות'); return; }
+    const set = Store.settings;
+    openModal(`<h2>בקשת החלפה</h2>
+      <p class="small muted mt0">הבקשה תגיע לוועד ההורים, והם ידאגו למחליף/ה ויעדכנו את הלוח.</p>
+      <div class="card">
+        <label class="field"><span>איזו משמרת?</span><select class="input" id="sw-d">${future.map((d) => `<option value="${d}" ${d === date ? 'selected' : ''}>${fmtLong(d)}</option>`).join('')}</select></label>
+        <label class="field" style="margin-bottom:0"><span>הערה לוועד (לא חובה)</span><textarea class="input" id="sw-n" rows="3" placeholder="לדוגמה: אני בחו״ל באותו שבוע"></textarea></label>
+      </div>
+      <div class="btn-row"><button class="btn green" id="sw-go" style="flex:1">${ic('swap')} שליחת הבקשה</button><button class="btn ghost" data-dismiss>ביטול</button></div>
+      ${set.committeePhone ? `<p class="small muted center">דחוף? <a href="${waLink(set.committeePhone, '')}" target="_blank" rel="noopener">כתבו לוועד בוואטסאפ</a></p>` : ''}`, (root) => {
+      root.querySelector('#sw-go').onclick = async () => {
+        await Store.requestSwap(pid, root.querySelector('#sw-d').value, root.querySelector('#sw-n').value.trim());
+        closeModal(); toast('הבקשה נשלחה לוועד ✔', 'ok');
+      };
+    });
+  }
+
+  /* ---------- committee members ---------- */
+  function committeeModal(id) {
+    const c = id ? { ...Store.committee.find((x) => x.id === id) } : { name: '', phone: '' };
+    const me = Store.session();
+    openModal(`<h2>${id ? 'חבר/ת ועד' : 'חבר/ת ועד חדש/ה'}</h2>
+      <div class="card">
+        <label class="field"><span>שם מלא *</span><input class="input" id="cn" value="${esc(c.name)}"></label>
+        <label class="field" style="margin-bottom:0"><span>טלפון *</span><input class="input" id="cp" type="tel" inputmode="tel" value="${esc(c.phone)}"></label>
+      </div>
+      ${id ? codeCard('admin', id) : '<p class="small muted">אחרי השמירה ייווצר קוד אישי שאפשר לשלוח בוואטסאפ.</p>'}
+      <div class="btn-row"><button class="btn green" id="csave" style="flex:1">${ic('check')} שמירה</button>
+      ${id && id !== me.cid ? `<button class="btn red" id="cdel" aria-label="הסרה">${ic('trash')}</button>` : ''}<button class="btn ghost" data-dismiss>ביטול</button></div>`, (root) => {
+      if (id) mountCodeCard(root, 'admin', id, committeeModal);
+      root.querySelector('#csave').onclick = async () => {
+        c.name = root.querySelector('#cn').value.trim();
+        c.phone = root.querySelector('#cp').value.trim();
+        if (!c.name || Store.util.normPhone(c.phone).length < 9) { toast('נא למלא שם וטלפון תקין', 'err'); return; }
+        const isNew = !id;
+        const saved = await Store.saveCommittee({ id: c.id, name: c.name, phone: c.phone });
+        toast('נשמר', 'ok');
+        if (isNew) committeeModal(saved.id); else closeModal();
+      };
+      const del = root.querySelector('#cdel');
+      if (del) del.onclick = () => askConfirm(`להסיר את ${c.name} מהוועד? הגישה שלו/ה לממשק הועד תיחסם מיד.`, 'הסרה', async () => { await Store.removeCommittee(id); toast('הוסר/ה מהוועד'); });
     });
   }
 
@@ -794,16 +993,41 @@
     if (!el || el.closest('#modal-root') && !el.closest('.modal')) return;
     const a = el.dataset.a, v = el.dataset.v, s = Store.session();
     const act = {
-      'login-tab': () => { viewState.loginTab = v; render(); },
-      logout: () => { Store.logout(); viewState = {}; go('login'); },
+      'demo-login': () => { document.getElementById('lphone').value = el.dataset.phone; document.getElementById('lcode').value = '123456'; document.getElementById('lform').requestSubmit(); },
+      logout: async () => { closeModal(); viewState = {}; await Store.logout(); go('login'); },
       install: async () => {
         if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; render(); }
         else installHelp();
       },
       'hide-install': () => { try { localStorage.setItem('nv-hide-install', '1'); } catch (x) { /* ignore */ } render(); },
-      checkin: () => {
-        Store.checkIn(today(), s.pid); navigator.vibrate && navigator.vibrate(60); confetti();
+      checkin: async () => {
+        if (el.disabled) return;
+        el.disabled = true;
+        const small = el.querySelector('small'); if (small) small.textContent = 'בודק מיקום…';
+        const geo = await verifyLocation();
+        if (!geo.ok) { el.disabled = false; if (small) small.textContent = 'סימון כניסה'; return locationProblem(geo); }
+        await Store.checkIn(today(), s.pid, geo.rec);
+        navigator.vibrate && navigator.vibrate(60); confetti();
         toast(Store.isLate(today(), s.pid) ? 'נרשמה כניסה – תודה שהגעת!' : 'נרשמה כניסה – משמרת מוצלחת! 💪', 'ok');
+      },
+      'swap-req': () => swapModal(s.pid, el.dataset.d),
+      'req-done': () => Store.resolveRequest(el.dataset.id).then(() => toast('הבקשה סומנה כטופלה', 'ok')),
+      push: async () => {
+        try { await Store.enablePush(); toast('התראות הופעלו 🔔', 'ok'); try { localStorage.setItem('nv-push', '1'); } catch (x) { /* ignore */ } render(); }
+        catch (x) {
+          const m = { 'push-demo': 'התראות זמינות רק בגרסה המחוברת', 'push-not-configured': 'הועד עוד לא הגדיר התראות', 'push-denied': 'ההתראות נחסמו. אפשר להפעיל אותן בהגדרות הדפדפן', 'push-unsupported': isIOS() ? 'באייפון: התקינו קודם את האפליקציה למסך הבית' : 'הדפדפן לא תומך בהתראות' };
+          toast(m[x.message] || 'הפעלת ההתראות נכשלה', 'err');
+        }
+      },
+      'wa-code': () => window.open(waLink(el.dataset.phone, codeMessage(el.dataset.kind, el.dataset.id)), '_blank', 'noopener'),
+      'committee-edit': () => committeeModal(el.dataset.id),
+      'geo-here': async () => {
+        try {
+          const pos = await getPosition();
+          document.getElementById('gLat').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('gLng').value = pos.coords.longitude.toFixed(6);
+          toast(`המיקום נקלט (דיוק ${Math.round(pos.coords.accuracy)} מ׳). לחצו שמירה`, 'ok');
+        } catch (x) { toast('לא הצלחנו לקבל מיקום. אשרו גישה למיקום ונסו שוב', 'err'); }
       },
       checkout: () => { Store.checkOut(today(), s.pid); navigator.vibrate && navigator.vibrate([40, 40, 80]); confetti(); toast('תודה! הצלת חיים היום 💚', 'ok'); },
       ics: () => exportICS(s.pid),
@@ -838,14 +1062,23 @@
         download(`neshek-vase-records_${from}_${to}.csv`, toCSV([['תאריך', 'יום', 'הורה', 'סטטוס', 'כניסה', 'יציאה', 'דקות', 'איחור', 'הערה', 'דווח ע״י'],
           ...records.map((x) => [fmtFull(x.d), DOW_LONG[dow(x.d)], Store.parent(x.id)?.name, STATUS[x.st], x.r.in || '', x.r.out || '', Store.minutes(x.d, x.id), Store.isLate(x.d, x.id) ? 'כן' : '', x.r.note || '', x.r.by === 'admin' ? 'ועד' : x.r.by ? 'הורה' : ''])]), 'text/csv;charset=utf-8');
       },
-      'save-settings': () => {
+      'save-settings': async () => {
         const g = (id) => document.getElementById(id).value;
         const days = [...document.querySelectorAll('.sDay:checked')].map((x) => +x.value);
-        if (!g('sCode').trim()) { toast('קוד ועד לא יכול להיות ריק', 'err'); return; }
         if (g('sStart') >= g('sEnd')) { toast('שעת הסיום חייבת להיות אחרי ההתחלה', 'err'); return; }
-        Store.saveSettings({ shiftStart: g('sStart'), shiftEnd: g('sEnd'), perShift: Math.max(1, +g('sPer') || 2), lateGraceMin: Math.max(0, +g('sGrace') || 0), schoolDays: days, schoolName: g('sSchool').trim() || 'מישור הנוף', committeePhone: g('sPhone').trim(), adminCode: g('sCode').trim() });
+        const lat = g('gLat').trim(), lng = g('gLng').trim();
+        if ((lat || lng) && (isNaN(+lat) || isNaN(+lng) || !lat || !lng)) { toast('קואורדינטות לא תקינות', 'err'); return; }
+        await Store.saveSettings({
+          shiftStart: g('sStart'), shiftEnd: g('sEnd'), perShift: Math.max(1, +g('sPer') || 2), lateGraceMin: Math.max(0, +g('sGrace') || 0),
+          schoolDays: days, schoolName: g('sSchool').trim() || 'מישור הנוף', committeePhone: g('sPhone').trim(),
+          geoMode: g('gMode'), geoLat: lat ? +lat : null, geoLng: lng ? +lng : null, geoRadius: Math.max(30, +g('gRad') || 200)
+        });
+        viewState.dirty = false;
         toast('ההגדרות נשמרו', 'ok');
+        render();
       },
+      'csv-codes': () => download(`neshek-vase-codes_${today()}.csv`, toCSV([['שם', 'טלפון', 'ילד/ה', 'כיתה', 'קוד אישי', 'נכנס/ה לאפליקציה'],
+        ...Store.parents.filter((p) => p.active).map((p) => [p.name, p.phone, p.child, p.cls, Store.codeOf(p.id), p.uid ? 'כן' : ''])]), 'text/csv;charset=utf-8'),
       backup: () => download(`neshek-vase-backup_${today()}.json`, Store.exportJSON(), 'application/json'),
       reset: () => askConfirm('לאפס את כל הנתונים לנתוני הדגמה? פעולה זו אינה הפיכה.', 'איפוס', () => { Store.resetDemo(); toast('הנתונים אופסו'); })
     };
@@ -885,9 +1118,31 @@
   }
   setInterval(tick, 1000);
 
-  Store.subscribe(render);
-  window.addEventListener('hashchange', () => { closeModal(); render(); });
+  // Live data can arrive at any moment. Don't redraw over a form someone is editing.
+  let pending = false;
+  const editing = () => {
+    const a = document.activeElement;
+    return viewState.dirty || (a && $app.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.id !== 'pq');
+  };
+  function liveRender() { if (editing()) { pending = true; return; } pending = false; render(); }
+  document.addEventListener('focusout', () => setTimeout(() => { if (pending && !editing()) liveRender(); }, 50));
+  document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#app') && route()[1] === 'settings') viewState.dirty = true; }, true);
+
+  Store.onError((e) => {
+    console.error(e);
+    toast(e && e.code === 'permission-denied' ? 'אין הרשאה לפעולה הזו' : 'השמירה נכשלה. בדקו את החיבור לאינטרנט', 'err');
+  });
+  window.addEventListener('hashchange', () => { closeModal(); viewState.dirty = false; render(); });
   // re-render when the app comes back to the foreground (status may have changed)
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
-  render();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) liveRender(); });
+
+  $app.innerHTML = `<div class="splash"><img src="icons/icon.svg" alt=""><div class="splash-t"><span class="a">נשק</span> <span class="b">וסע</span></div><div class="spinner"></div></div>`;
+  Store.ready.then(() => {
+    if (Store.initError) {
+      $app.innerHTML = `<div class="login"><div class="card center" style="margin-top:20vh"><h3>לא הצלחנו להתחבר</h3><p class="small muted">בדקו את החיבור לאינטרנט ונסו שוב.</p><button class="btn green" onclick="location.reload()">ניסיון נוסף</button></div></div>`;
+      return;
+    }
+    Store.subscribe(liveRender);
+    render();
+  });
 })();

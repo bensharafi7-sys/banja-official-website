@@ -1,16 +1,27 @@
 // Service worker: app shell offline, network-first for pages so updates arrive quickly.
-const CACHE = 'neshek-vase-v1';
+// When Firebase + a VAPID key are configured it also receives the shift-reminder pushes.
+importScripts('config.js');
+const CFG = self.NV_CONFIG || {};
+if (CFG.firebase && CFG.vapidKey) {
+  importScripts(CFG.sdkBase + 'firebase-app-compat.js', CFG.sdkBase + 'firebase-messaging-compat.js');
+  firebase.initializeApp(CFG.firebase);
+  firebase.messaging(); // shows `notification` payloads while the app is closed
+}
+
+const CACHE = 'neshek-vase-v2';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
+  './config.js',
   './store.js',
   './app.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './icons/school-logo.jpg'
 ];
 
 self.addEventListener('install', (e) => {

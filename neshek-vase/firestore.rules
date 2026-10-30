@@ -1,0 +1,114 @@
+rules_version = '2';
+// נשק וסע – Firestore security rules
+// Paste into: Firebase console → Firestore Database → Rules → Publish
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // committee member, judged by the state BEFORE this request
+    function isAdmin() { return signedIn() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
+    // the one-time batch that creates the first committee account (meta/setup does not exist yet)
+    function bootstrapping() {
+      return signedIn()
+        && !exists(/databases/$(db)/documents/meta/setup)
+        && getAfter(/databases/$(db)/documents/meta/setup).data.owner == request.auth.uid;
+    }
+    function adminWrite() { return isAdmin() || bootstrapping(); }
+    function loginEmail(key) { return key + '@nv-login.app'; }
+    function ownsClaim(key, kind, id) {
+      let c = get(/databases/$(db)/documents/claims/$(key)).data;
+      return signedIn() && request.auth.token.email == loginEmail(key) && c.kind == kind && c.id == id;
+    }
+    function isParent(pid) {
+      return signedIn() && get(/databases/$(db)/documents/parents/$(pid)).data.uid == request.auth.uid;
+    }
+    function onlyChanges(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // exists only after the first committee account was created
+    match /meta/setup {
+      allow get: if true;
+      allow create: if signedIn() && request.resource.data.owner == request.auth.uid;
+    }
+
+    match /admins/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid && (
+        bootstrapping()
+        // a committee member signing in with the code the committee gave them
+        || ownsClaim(request.resource.data.claimKey, 'admin', request.resource.data.cid));
+      allow update, delete: if isAdmin();
+    }
+
+    // phone+code → person. Readable only by the account derived from that phone+code.
+    match /claims/{key} {
+      allow get: if signedIn() && request.auth.token.email == loginEmail(key);
+      allow list: if isAdmin();
+      allow write: if adminWrite();
+    }
+
+    match /secrets/{id} {
+      allow read: if isAdmin();
+      allow write: if adminWrite();
+    }
+
+    match /committee/{cid} {
+      allow read: if isAdmin();
+      allow create: if adminWrite();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (onlyChanges(['uid', 'claimKey'])
+            && request.resource.data.uid == request.auth.uid
+            && ownsClaim(request.resource.data.claimKey, 'admin', cid));
+    }
+
+    match /parents/{pid} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (onlyChanges(['uid', 'claimKey'])
+            && request.resource.data.uid == request.auth.uid
+            && ownsClaim(request.resource.data.claimKey, 'parent', pid));
+    }
+
+    match /settings/{doc} {
+      allow read: if signedIn();
+      allow write: if adminWrite();
+    }
+
+    match /shifts/{date} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // id = <date>_<pid>
+    match /attendance/{id} {
+      allow read: if signedIn();
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin() || (
+        isParent(request.resource.data.pid)
+        && id == request.resource.data.date + '_' + request.resource.data.pid
+        && request.resource.data.by == 'self'
+        && request.resource.data.status == 'present'
+        && request.resource.data.pid in get(/databases/$(db)/documents/shifts/$(request.resource.data.date)).data.team
+        && (resource == null || resource.data.status != 'excused')
+      );
+    }
+
+    match /requests/{id} {
+      allow read: if isAdmin() || (signedIn() && isParent(resource.data.pid));
+      allow create: if isParent(request.resource.data.pid) && request.resource.data.status == 'open';
+      allow update, delete: if isAdmin();
+    }
+
+    // push-notification tokens, written by each device for itself
+    match /tokens/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /log/{id} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+    }
+  }
+}

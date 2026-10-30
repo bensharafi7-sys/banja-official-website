@@ -1,0 +1,25 @@
+name: נשק וסע – תזכורות למשמרת
+
+on:
+  schedule:
+    # every evening 18:00 UTC = 20:00 (winter) / 21:00 (summer) Israel time, after Shabbat ends
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install firebase-admin
+        working-directory: neshek-vase/tools
+        run: npm install --no-save --no-package-lock firebase-admin@12.7.0
+      - name: Send reminders for tomorrow
+        working-directory: neshek-vase/tools
+        run: node send-reminders.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          APP_URL: ${{ vars.NESHEK_VASE_URL }}
